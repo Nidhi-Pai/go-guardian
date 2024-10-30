@@ -3,6 +3,7 @@
 # dependencies
 frontend/node_modules
 backend/venv
+backend/instance/go_guardian.db
 /.pnp
 .pnp.*
 .yarn/*
