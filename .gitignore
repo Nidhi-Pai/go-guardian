@@ -4,6 +4,10 @@
 frontend/node_modules
 backend/venv
 backend/instance/go_guardian.db
+frontend/src/components/ui
+frontend/.next
+
+
 /.pnp
 .pnp.*
 .yarn/*
