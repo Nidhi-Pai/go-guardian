@@ -72,18 +72,37 @@ def create_app():
     # Register blueprints
     from .routes.safety_routes import safety_bp
     from .routes.emergency_routes import emergency_bp
+    from .routes.monitoring_routes import monitoring_bp
+    from .routes.voice_routes import voice_bp
     
+    # Register core blueprints
     app.register_blueprint(safety_bp, url_prefix='/api/safety')
     app.register_blueprint(emergency_bp, url_prefix='/api/emergency')
     
+    # Register new feature blueprints
+    app.register_blueprint(monitoring_bp, url_prefix='/api/monitoring')
+    app.register_blueprint(voice_bp, url_prefix='/api/voice')
+    
     @app.route('/health')
     def health_check():
-       return {
+        return {
             "status": "healthy",
             "services": {
                 "ai": "available" if app.gemini_service else "unavailable",
-                "database": "connected" if db.engine else "disconnected"
+                "database": "connected" if db.engine else "disconnected",
+                "monitoring": "active",
+                "voice": "active"
             },
             "version": "1.0.0"
         }
+
+    # Global error handler
+    @app.errorhandler(Exception)
+    def handle_error(error):
+        print(f"Unexpected error: {str(error)}")
+        return jsonify({
+            "error": str(error),
+            "status": "error"
+        }), 500
+
     return app
