@@ -198,7 +198,7 @@ class EmergencyService:
             ],
             "emergency_contacts": [
                 "911 - Emergency Services",
-                "415-553-0123 - SF,
+                "415-553-0123 - SF",
                 "415-553-0123 - SF Police Non-Emergency",
                 "415-206-8000 - SF General Hospital",
                 "415-353-6255 - UCSF Emergency"

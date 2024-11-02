@@ -2,7 +2,7 @@
 
 from flask import Blueprint, request, jsonify
 from ..services.gemini_service import GeminiService
-from ..models import db, Route, Alert
+from ..models import db, Alert
 from datetime import datetime
 import re
 import traceback

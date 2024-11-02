@@ -1,6 +1,6 @@
 # backend/app/services/motion_detector.py
 
-from typing import Dict, Any, Callable
+from typing import Dict,List, Any, Callable
 import logging
 from datetime import datetime
 import numpy as np

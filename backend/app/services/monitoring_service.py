@@ -1,11 +1,12 @@
 # backend/app/services/monitoring_service.py
 
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, List
 import google.generativeai as genai
 from datetime import datetime
 import json
 import asyncio
 import logging
+import numpy as np
 from .emergency_service import EmergencyService
 
 class MonitoringService:
@@ -260,4 +261,3 @@ class MonitoringService:
         c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
 
         return R * c
-</antArtif
