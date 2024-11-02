@@ -1,390 +1,221 @@
-// src/app/test/page.tsx
-
 "use client";
 
-import React from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Link from "next/link";
 import {
   MapPin,
   Shield,
+  Users,
+  Settings,
   AlertTriangle,
-  Vibrate,
-  Navigation,
   Loader2
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { SafeRouteMap } from "@/components/SafeRouteMap";
+import { EmergencyAlert } from "@/components/EmergencyAlert";
 
 // Types
-interface TestResults {
-  safety?: any;
-  emergency?: any;
-  motion?: any;
-  monitoring?: any;
+interface Location {
+  lat: number;
+  lng: number;
+  timestamp?: Date;
 }
 
-interface LoadingState {
-  safety?: boolean;
-  emergency?: boolean;
-  motion?: boolean;
-  monitoring?: boolean;
+interface QuickAction {
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  href: string;
+  color: string;
 }
 
-interface ErrorState {
-  safety?: string;
-  emergency?: string;
-  motion?: string;
-  monitoring?: string;
-}
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-// API Configuration
-const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
-  headers: {
-    'Content-Type': 'application/json',
+const quickActions: QuickAction[] = [
+  {
+    title: "Plan Safe Route",
+    description: "Find the safest path to your destination",
+    icon: MapPin,
+    href: "/route",
+    color: "bg-blue-500",
   },
-  credentials: 'include' as RequestCredentials
-};
-
-// Test locations - San Francisco landmarks
-const TEST_LOCATIONS = {
-  ferryBuilding: {
-    name: 'Ferry Building',
-    coords: { lat: 37.7955, lng: -122.3937 }
+  {
+    title: "Emergency Contacts",
+    description: "Manage your trusted contacts",
+    icon: Shield,
+    href: "/emergency-contacts",
+    color: "bg-red-500",
   },
-  missionDistrict: {
-    name: 'Mission District',
-    coords: { lat: 37.7599, lng: -122.4148 }
+  {
+    title: "Community",
+    description: "Connect with other users",
+    icon: Users,
+    href: "/community",
+    color: "bg-green-500",
   },
-  financialDistrict: {
-    name: 'Financial District',
-    coords: { lat: 37.7946, lng: -122.3999 }
-  }
-};
+  {
+    title: "Settings",
+    description: "Customize your preferences",
+    icon: Settings,
+    href: "/profile",
+    color: "bg-purple-500",
+  },
+];
 
-export default function TestPage() {
-  const [testResults, setTestResults] = React.useState<TestResults>({});
-  const [loading, setLoading] = React.useState<LoadingState>({});
-  const [errors, setErrors] = React.useState<ErrorState>({});
+export default function HomePage() {
+  const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
 
-  const clearError = (feature: keyof ErrorState) => {
-    setErrors(prev => {
-      const newErrors = { ...prev };
-      delete newErrors[feature];
-      return newErrors;
-    });
-  };
+  useEffect(() => {
+    const getLocation = async () => {
+      setIsLoadingLocation(true);
+      setLocationError(null);
 
-  const runSafetyAnalysis = async () => {
-    clearError('safety');
-    setLoading(prev => ({ ...prev, safety: true }));
-    
-    try {
-      const response = await fetch(`${API_CONFIG.baseURL}/safety/analyze-route`, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        credentials: API_CONFIG.credentials,
-        body: JSON.stringify({
-          start_location: TEST_LOCATIONS.missionDistrict.coords,
-          end_location: TEST_LOCATIONS.financialDistrict.coords
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      try {
+        if ("geolocation" in navigator) {
+          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 5000,
+              maximumAge: 0
+            });
+          });
+
+          setCurrentLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            timestamp: new Date(position.timestamp),
+          });
+        } else {
+          throw new Error("Geolocation is not supported by your browser.");
+        }
+      } catch (error) {
+        setLocationError(
+          error instanceof Error 
+            ? error.message 
+            : "Unable to get your location. Please enable location services."
+        );
+      } finally {
+        setIsLoadingLocation(false);
       }
-      
-      const data = await response.json();
-      setTestResults(prev => ({ ...prev, safety: data }));
-    } catch (err) {
-      setErrors(prev => ({
-        ...prev,
-        safety: err instanceof Error ? err.message : "Safety analysis failed"
-      }));
-    } finally {
-      setLoading(prev => ({ ...prev, safety: false }));
+    };
+
+    getLocation();
+  }, []);
+
+  const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
+    if (route.routes?.[0]) {
+      console.log("Route calculated:", {
+        distance: route.routes[0].legs?.[0]?.distance?.text,
+        duration: route.routes[0].legs?.[0]?.duration?.text,
+        start_location: route.routes[0].legs?.[0]?.start_location?.toJSON(),
+        end_location: route.routes[0].legs?.[0]?.end_location?.toJSON(),
+      });
     }
   };
 
-  const triggerEmergencyAlert = async () => {
-    clearError('emergency');
-    setLoading(prev => ({ ...prev, emergency: true }));
-    
-    try {
-      const response = await fetch(`${API_CONFIG.baseURL}/emergency/alert`, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        credentials: API_CONFIG.credentials,
-        body: JSON.stringify({
-          type: 'test_emergency',
-          location: TEST_LOCATIONS.missionDistrict.coords,
-          description: 'Test emergency alert'
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setTestResults(prev => ({ ...prev, emergency: data }));
-    } catch (err) {
-      setErrors(prev => ({
-        ...prev,
-        emergency: err instanceof Error ? err.message : "Emergency alert failed"
-      }));
-    } finally {
-      setLoading(prev => ({ ...prev, emergency: false }));
+  const renderMap = () => {
+    if (!GOOGLE_MAPS_API_KEY) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Google Maps API key is not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
+          </AlertDescription>
+        </Alert>
+      );
     }
-  };
 
-  const testMotionDetection = async () => {
-    clearError('motion');
-    setLoading(prev => ({ ...prev, motion: true }));
-    
-    try {
-      // Simulate accelerometer data for phone shake
-      const motionData = [
-        { x: 0.1, y: 0.2, z: 9.8 },  // Normal position
-        { x: 5.1, y: 4.2, z: 12.8 }, // Sharp movement right
-        { x: 0.1, y: 0.2, z: 9.8 },  // Return to normal
-        { x: -4.1, y: -3.2, z: 6.8 }, // Sharp movement left
-        { x: 0.1, y: 0.2, z: 9.8 }   // Return to normal
-      ];
-
-      const response = await fetch(`${API_CONFIG.baseURL}/monitoring/motion`, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        credentials: API_CONFIG.credentials,
-        body: JSON.stringify({
-          acceleration_data: motionData,
-          timestamp: Date.now() / 1000,
-          location: TEST_LOCATIONS.missionDistrict.coords
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setTestResults(prev => ({ ...prev, motion: data }));
-    } catch (err) {
-      setErrors(prev => ({
-        ...prev,
-        motion: err instanceof Error ? err.message : "Motion detection failed"
-      }));
-    } finally {
-      setLoading(prev => ({ ...prev, motion: false }));
+    if (isLoadingLocation) {
+      return (
+        <div className="h-[400px] flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Getting your location...</p>
+          </div>
+        </div>
+      );
     }
-  };
 
-  const startMonitoring = async () => {
-    clearError('monitoring');
-    setLoading(prev => ({ ...prev, monitoring: true }));
-    
-    try {
-      const response = await fetch(`${API_CONFIG.baseURL}/monitoring/start`, {
-        method: 'POST',
-        headers: API_CONFIG.headers,
-        credentials: API_CONFIG.credentials,
-        body: JSON.stringify({
-          user_id: 1,
-          route: {
-            start: TEST_LOCATIONS.missionDistrict.coords,
-            end: TEST_LOCATIONS.financialDistrict.coords
-          }
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      setTestResults(prev => ({ ...prev, monitoring: data }));
-    } catch (err) {
-      setErrors(prev => ({
-        ...prev,
-        monitoring: err instanceof Error ? err.message : "Monitoring failed"
-      }));
-    } finally {
-      setLoading(prev => ({ ...prev, monitoring: false }));
+    if (locationError) {
+      return (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{locationError}</AlertDescription>
+        </Alert>
+      );
     }
+
+    if (!currentLocation) {
+      return (
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>Location not available</AlertDescription>
+        </Alert>
+      );
+    }
+
+    return (
+      <SafeRouteMap
+        apiKey={GOOGLE_MAPS_API_KEY}
+        initialLocation={currentLocation}
+        destination={null}
+        onRouteCalculated={handleRouteCalculated}
+      />
+    );
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="container mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Feature Testing Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Testing location: {TEST_LOCATIONS.missionDistrict.name}
-          </p>
-        </div>
+    <div className="container max-w-7xl mx-auto p-6 space-y-8">
+      <div className="space-y-2">
+        <h1 className="text-4xl font-bold tracking-tight">Welcome to Go Guardian</h1>
+        <p className="text-muted-foreground">
+          Your AI-powered safety companion
+        </p>
+      </div>
 
-        {/* Error Alerts */}
-        <div className="space-y-2">
-          {Object.entries(errors).map(([feature, error]) => (
-            error && (
-              <Alert key={feature} variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )
-          ))}
-        </div>
-
-        {/* Test Cards Grid */}
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Safety Analysis Test */}
-          <Card>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {quickActions.map((action) => (
+          <Card key={action.href} className="hover:shadow-lg transition-all">
             <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Shield className="h-5 w-5" />
-                <span>Safety Analysis</span>
-              </CardTitle>
+              <div className={`w-12 h-12 rounded-full ${action.color} flex items-center justify-center text-white mb-4`}>
+                <action.icon className="h-6 w-6" />
+              </div>
+              <CardTitle className="text-xl">{action.title}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={runSafetyAnalysis} 
-                disabled={loading.safety}
-                className="w-full"
-              >
-                {loading.safety ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Navigation className="h-4 w-4 mr-2" />
-                )}
-                Test Route Analysis
+            <CardContent>
+              <p className="text-muted-foreground mb-4">{action.description}</p>
+              <Button asChild className="w-full">
+                <Link href={action.href}>Get Started</Link>
               </Button>
-
-              {testResults.safety && (
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-medium">Results:</h4>
-                    <pre className="p-2 rounded bg-muted text-sm overflow-auto">
-                      {JSON.stringify(testResults.safety, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
+        ))}
+      </div>
 
-          {/* Emergency Alert Test */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5" />
-                <span>Emergency Alert</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={triggerEmergencyAlert} 
-                disabled={loading.emergency}
-                variant="destructive"
-                className="w-full"
-              >
-                {loading.emergency ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                )}
-                Trigger Emergency Alert
-              </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <MapPin className="h-5 w-5" />
+            <span>Current Location</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="h-[400px]">
+          {renderMap()}
+        </CardContent>
+      </Card>
 
-              {testResults.emergency && (
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-medium">Response:</h4>
-                    <pre className="p-2 rounded bg-muted text-sm overflow-auto">
-                      {JSON.stringify(testResults.emergency, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Motion Detection Test */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Vibrate className="h-5 w-5" />
-                <span>Motion Detection</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={testMotionDetection} 
-                disabled={loading.motion}
-                className="w-full"
-              >
-                {loading.motion ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Vibrate className="h-4 w-4 mr-2" />
-                )}
-                Test Motion Detection
-              </Button>
-
-              {testResults.motion && (
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-medium">Detection Results:</h4>
-                    <pre className="p-2 rounded bg-muted text-sm overflow-auto">
-                      {JSON.stringify(testResults.motion, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Journey Monitoring Test */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MapPin className="h-5 w-5" />
-                <span>Journey Monitoring</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Button 
-                onClick={startMonitoring} 
-                disabled={loading.monitoring}
-                className="w-full"
-              >
-                {loading.monitoring ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <MapPin className="h-4 w-4 mr-2" />
-                )}
-                Start Test Journey
-              </Button>
-
-              {testResults.monitoring && (
-                <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
-                  <div className="p-4 space-y-2">
-                    <h4 className="font-medium">Monitoring Status:</h4>
-                    <pre className="p-2 rounded bg-muted text-sm overflow-auto">
-                      {JSON.stringify(testResults.monitoring, null, 2)}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
+      {currentLocation && (
+        <EmergencyAlert
+          currentLocation={currentLocation}
+          onAlertSent={(alert) => {
+            console.log("Emergency alert sent:", alert);
+          }}
+        />
+      )}
     </div>
   );
 }

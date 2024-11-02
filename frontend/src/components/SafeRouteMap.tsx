@@ -1,16 +1,22 @@
+// src/components/SafeRouteMap.tsx
+
 "use client";
 
-import { useEffect, useState } from "react";
+import React from 'react';
+import { GoogleMap, LoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2 } from "lucide-react";
-import { GoogleMap, useJsApiLoader, DirectionsRenderer } from '@react-google-maps/api';
-import type { Location } from "@/types/index";
+import { AlertTriangle } from "lucide-react";
+
+interface Location {
+  lat: number;
+  lng: number;
+}
 
 interface SafeRouteMapProps {
-  apiKey: string;
+  apiKey?: string;
   initialLocation: Location;
-  destination?: Location | null;
-  onRouteCalculated: (route: google.maps.DirectionsRoute) => Promise<void>;
+  destination: Location | null;
+  onRouteCalculated?: (route: google.maps.DirectionsResult) => void;
 }
 
 const mapContainerStyle = {
@@ -18,104 +24,118 @@ const mapContainerStyle = {
   height: '400px'
 };
 
-const defaultOptions = {
-  mapTypeControl: false,
-  streetViewControl: false,
-  fullscreenControl: false,
+const defaultCenter = {
+  lat: 37.7749,
+  lng: -122.4194  // San Francisco coordinates
 };
 
-export function SafeRouteMap({
-  apiKey,
-  initialLocation,
-  destination,
-  onRouteCalculated
+// Map styling for better visibility
+const mapStyles = [
+  {
+    featureType: "poi",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }]
+  },
+  {
+    featureType: "transit",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }]
+  }
+];
+
+export function SafeRouteMap({ 
+  apiKey, 
+  initialLocation, 
+  destination, 
+  onRouteCalculated 
 }: SafeRouteMapProps) {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-  const [directions, setDirections] = useState<google.maps.DirectionsResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [map, setMap] = React.useState<google.maps.Map | null>(null);
+  const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
+  const [directionsRenderer, setDirectionsRenderer] = React.useState<google.maps.DirectionsRenderer | null>(null);
+  const [route, setRoute] = React.useState<google.maps.DirectionsResult | null>(null);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: apiKey,
-    libraries: ['places']
-  });
-
-  useEffect(() => {
-    if (initialLocation && destination && map) {
-      calculateRoute();
-    }
-  }, [initialLocation, destination, map]);
-
-  const calculateRoute = async () => {
-    if (!destination) return;
-
-    const directionsService = new google.maps.DirectionsService();
-
-    try {
-      const result = await directionsService.route({
-        origin: { lat: initialLocation.lat, lng: initialLocation.lng },
-        destination: { lat: destination.lat, lng: destination.lng },
-        travelMode: google.maps.TravelMode.WALKING,
-      });
-
-      setDirections(result);
-      if (onRouteCalculated) {
-        await onRouteCalculated(result.routes[0]);
-      }
-    } catch (err) {
-      setError("Failed to calculate route");
-      console.error("Route calculation failed:", err);
-    }
-  };
-
-  const onLoad = (map: google.maps.Map) => {
-    setMap(map);
-  };
-
-  const onUnmount = () => {
-    setMap(null);
-  };
-
-  if (loadError) {
+  // Validate API key
+  if (!apiKey) {
     return (
       <Alert variant="destructive">
-        <AlertDescription>Failed to load Google Maps</AlertDescription>
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
+        </AlertDescription>
       </Alert>
     );
   }
 
-  if (!isLoaded) {
-    return (
-      <div className="flex justify-center items-center h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
+  // Initialize directions service and renderer
+  const onMapLoad = React.useCallback((map: google.maps.Map) => {
+    setMap(map);
+    const directionsService = new google.maps.DirectionsService();
+    const directionsRenderer = new google.maps.DirectionsRenderer({
+      suppressMarkers: false,
+      preserveViewport: false,
+      polylineOptions: {
+        strokeColor: "#0066CC",
+        strokeWeight: 5,
+        strokeOpacity: 0.8
+      }
+    });
+    setDirectionsService(directionsService);
+    setDirectionsRenderer(directionsRenderer);
+    directionsRenderer.setMap(map);
+  }, []);
+
+  // Calculate route when destination changes
+  React.useEffect(() => {
+    if (destination && directionsService && directionsRenderer && map) {
+      setError(null);
+      
+      directionsService.route({
+        origin: initialLocation,
+        destination: destination,
+        travelMode: google.maps.TravelMode.WALKING,
+        provideRouteAlternatives: true
+      }, (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK && result) {
+          directionsRenderer.setDirections(result);
+          setRoute(result);
+          onRouteCalculated?.(result);
+        } else {
+          setError('Failed to calculate route');
+        }
+      });
+    }
+  }, [destination, directionsService, directionsRenderer, map, initialLocation, onRouteCalculated]);
 
   return (
-    <div className="relative">
+    <div className="w-full h-full relative">
       {error && (
-        <Alert variant="destructive" className="absolute top-4 right-4 z-10">
+        <Alert variant="destructive" className="absolute top-0 z-10 w-full">
+          <AlertTriangle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <GoogleMap
-        mapContainerStyle={mapContainerStyle}
-        center={{ lat: initialLocation.lat, lng: initialLocation.lng }}
-        zoom={14}
-        options={defaultOptions}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-      >
-        {directions && (
-          <DirectionsRenderer
-            directions={directions}
-            options={{
-              suppressMarkers: false,
-              preserveViewport: false,
-            }}
-          />
-        )}
-      </GoogleMap>
+      
+      <LoadScript googleMapsApiKey={apiKey}>
+        <GoogleMap
+          mapContainerStyle={mapContainerStyle}
+          zoom={14}
+          center={initialLocation || defaultCenter}
+          onLoad={onMapLoad}
+          options={{
+            styles: mapStyles,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            zoomControl: true,
+            clickableIcons: false,
+            scrollwheel: true,
+            disableDoubleClickZoom: true,
+          }}
+        >
+          {!destination && <Marker position={initialLocation} />}
+        </GoogleMap>
+      </LoadScript>
     </div>
   );
 }
