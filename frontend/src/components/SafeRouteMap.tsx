@@ -3,9 +3,9 @@
 "use client";
 
 import React from 'react';
-import { GoogleMap, LoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, useLoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface Location {
   lat: number;
@@ -29,7 +29,6 @@ const defaultCenter = {
   lng: -122.4194  // San Francisco coordinates
 };
 
-// Map styling for better visibility
 const mapStyles = [
   {
     featureType: "poi",
@@ -52,22 +51,13 @@ export function SafeRouteMap({
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
   const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
   const [directionsRenderer, setDirectionsRenderer] = React.useState<google.maps.DirectionsRenderer | null>(null);
-  const [route, setRoute] = React.useState<google.maps.DirectionsResult | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Validate API key
-  if (!apiKey) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Google Maps API key is missing. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
-        </AlertDescription>
-      </Alert>
-    );
-  }
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: apiKey || '',
+    libraries: ["places"],
+  });
 
-  // Initialize directions service and renderer
   const onMapLoad = React.useCallback((map: google.maps.Map) => {
     setMap(map);
     const directionsService = new google.maps.DirectionsService();
@@ -85,7 +75,6 @@ export function SafeRouteMap({
     directionsRenderer.setMap(map);
   }, []);
 
-  // Calculate route when destination changes
   React.useEffect(() => {
     if (destination && directionsService && directionsRenderer && map) {
       setError(null);
@@ -98,7 +87,6 @@ export function SafeRouteMap({
       }, (result, status) => {
         if (status === google.maps.DirectionsStatus.OK && result) {
           directionsRenderer.setDirections(result);
-          setRoute(result);
           onRouteCalculated?.(result);
         } else {
           setError('Failed to calculate route');
@@ -106,6 +94,37 @@ export function SafeRouteMap({
       });
     }
   }, [destination, directionsService, directionsRenderer, map, initialLocation, onRouteCalculated]);
+
+  if (!apiKey) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Google Maps API key is missing
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!isLoaded) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>Failed to load Google Maps</AlertDescription>
+      </Alert>
+    );
+  }
 
   return (
     <div className="w-full h-full relative">
@@ -116,26 +135,24 @@ export function SafeRouteMap({
         </Alert>
       )}
       
-      <LoadScript googleMapsApiKey={apiKey}>
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          zoom={14}
-          center={initialLocation || defaultCenter}
-          onLoad={onMapLoad}
-          options={{
-            styles: mapStyles,
-            streetViewControl: false,
-            mapTypeControl: false,
-            fullscreenControl: false,
-            zoomControl: true,
-            clickableIcons: false,
-            scrollwheel: true,
-            disableDoubleClickZoom: true,
-          }}
-        >
-          {!destination && <Marker position={initialLocation} />}
-        </GoogleMap>
-      </LoadScript>
+      <GoogleMap
+        mapContainerStyle={mapContainerStyle}
+        zoom={14}
+        center={initialLocation || defaultCenter}
+        onLoad={onMapLoad}
+        options={{
+          styles: mapStyles,
+          streetViewControl: false,
+          mapTypeControl: false,
+          fullscreenControl: false,
+          zoomControl: true,
+          clickableIcons: false,
+          scrollwheel: true,
+          disableDoubleClickZoom: true,
+        }}
+      >
+        {!destination && <Marker position={initialLocation} />}
+      </GoogleMap>
     </div>
   );
 }

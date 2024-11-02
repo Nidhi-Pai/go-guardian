@@ -1,221 +1,216 @@
+// src/app/route/page.tsx
+
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  MapPin,
-  Shield,
-  Users,
-  Settings,
   AlertTriangle,
-  Loader2
+  Shield,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { SafeRouteMap } from "@/components/SafeRouteMap";
-import { EmergencyAlert } from "@/components/EmergencyAlert";
+import { LocationSearch } from "@/components/LocationSearch";
+import { DirectionsPanel } from "@/components/DirectionsPanel";
+import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
 
-// Types
 interface Location {
   lat: number;
   lng: number;
-  timestamp?: Date;
+  address?: string;
 }
 
-interface QuickAction {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  href: string;
-  color: string;
+interface SafetyAnalysis {
+  safety_score: number;
+  risk_level: string;
+  risks: string[];
+  recommendations: string[];
+  safe_spaces: string[];
+}
+
+interface RouteInfo {
+  distance: string;
+  duration: string;
+  steps: google.maps.DirectionsStep[];
 }
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-const quickActions: QuickAction[] = [
-  {
-    title: "Plan Safe Route",
-    description: "Find the safest path to your destination",
-    icon: MapPin,
-    href: "/route",
-    color: "bg-blue-500",
-  },
-  {
-    title: "Emergency Contacts",
-    description: "Manage your trusted contacts",
-    icon: Shield,
-    href: "/emergency-contacts",
-    color: "bg-red-500",
-  },
-  {
-    title: "Community",
-    description: "Connect with other users",
-    icon: Users,
-    href: "/community",
-    color: "bg-green-500",
-  },
-  {
-    title: "Settings",
-    description: "Customize your preferences",
-    icon: Settings,
-    href: "/profile",
-    color: "bg-purple-500",
-  },
-];
-
-export default function HomePage() {
+export default function RoutePlannerPage() {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
-  const [locationError, setLocationError] = useState<string | null>(null);
-  const [isLoadingLocation, setIsLoadingLocation] = useState(true);
+  const [destination, setDestination] = useState<Location | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
 
+  // Get user's current location
   useEffect(() => {
-    const getLocation = async () => {
-      setIsLoadingLocation(true);
-      setLocationError(null);
-
-      try {
-        if ("geolocation" in navigator) {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0
-            });
-          });
-
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
           setCurrentLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            timestamp: new Date(position.timestamp),
           });
-        } else {
-          throw new Error("Geolocation is not supported by your browser.");
+        },
+        (error) => {
+          setError("Please enable location services to use route planning.");
         }
-      } catch (error) {
-        setLocationError(
-          error instanceof Error 
-            ? error.message 
-            : "Unable to get your location. Please enable location services."
-        );
-      } finally {
-        setIsLoadingLocation(false);
-      }
-    };
-
-    getLocation();
+      );
+    }
   }, []);
 
-  const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
-    if (route.routes?.[0]) {
-      console.log("Route calculated:", {
-        distance: route.routes[0].legs?.[0]?.distance?.text,
-        duration: route.routes[0].legs?.[0]?.duration?.text,
-        start_location: route.routes[0].legs?.[0]?.start_location?.toJSON(),
-        end_location: route.routes[0].legs?.[0]?.end_location?.toJSON(),
+  const handleLocationSelect = async (location: Location) => {
+    if (!currentLocation) return;
+
+    setLoading(true);
+    setError(null);
+    setDestination(location);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/safety/analyze-route", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          start_location: currentLocation,
+          end_location: location,
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const analysis = await response.json();
+      setSafetyAnalysis(analysis);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to plan route");
+      setDestination(null);
+      setSafetyAnalysis(null);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const renderMap = () => {
-    if (!GOOGLE_MAPS_API_KEY) {
-      return (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Google Maps API key is not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
-          </AlertDescription>
-        </Alert>
-      );
-    }
+  const handleRouteCalculated = (result: google.maps.DirectionsResult) => {
+    if (!result.routes?.[0]?.legs?.[0]) return;
+    
+    const leg = result.routes[0].legs[0];
+    setRouteInfo({
+      distance: leg.distance?.text || "",
+      duration: leg.duration?.text || "",
+      steps: leg.steps || [],
+    });
+  };
 
-    if (isLoadingLocation) {
-      return (
-        <div className="h-[400px] flex items-center justify-center">
-          <div className="flex flex-col items-center space-y-4">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Getting your location...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (locationError) {
-      return (
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>{locationError}</AlertDescription>
-        </Alert>
-      );
-    }
-
-    if (!currentLocation) {
-      return (
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>Location not available</AlertDescription>
-        </Alert>
-      );
-    }
-
-    return (
-      <SafeRouteMap
-        apiKey={GOOGLE_MAPS_API_KEY}
-        initialLocation={currentLocation}
-        destination={null}
-        onRouteCalculated={handleRouteCalculated}
-      />
-    );
+  const getTimeOfDay = () => {
+    const hour = new Date().getHours();
+    return hour >= 6 && hour < 18 ? "day" : "night";
   };
 
   return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Welcome to Go Guardian</h1>
-        <p className="text-muted-foreground">
-          Your AI-powered safety companion
-        </p>
+    <div className="container mx-auto p-6 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Plan Safe Route</h1>
+          <p className="text-muted-foreground">
+            Find the safest path to your destination
+          </p>
+        </div>
+        <Badge variant={getTimeOfDay() === "day" ? "default" : "secondary"}>
+          {getTimeOfDay() === "day" ? (
+            <Sun className="h-4 w-4 mr-2" />
+          ) : (
+            <Moon className="h-4 w-4 mr-2" />
+          )}
+          {getTimeOfDay() === "day" ? "Daytime Route" : "Nighttime Route"}
+        </Badge>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {quickActions.map((action) => (
-          <Card key={action.href} className="hover:shadow-lg transition-all">
-            <CardHeader>
-              <div className={`w-12 h-12 rounded-full ${action.color} flex items-center justify-center text-white mb-4`}>
-                <action.icon className="h-6 w-6" />
-              </div>
-              <CardTitle className="text-xl">{action.title}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground mb-4">{action.description}</p>
-              <Button asChild className="w-full">
-                <Link href={action.href}>Get Started</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Error Display */}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
+      {/* Search Bar */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <MapPin className="h-5 w-5" />
-            <span>Current Location</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="h-[400px]">
-          {renderMap()}
+        <CardContent className="pt-6">
+          <LocationSearch
+            onLocationSelect={handleLocationSelect}
+            loading={loading}
+            disabled={!currentLocation}
+          />
+          {!currentLocation && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Please enable location services to use route planning.
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {currentLocation && (
-        <EmergencyAlert
-          currentLocation={currentLocation}
-          onAlertSent={(alert) => {
-            console.log("Emergency alert sent:", alert);
-          }}
-        />
-      )}
+      {/* Main Content */}
+      <Tabs defaultValue="map" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="map">Map View</TabsTrigger>
+          <TabsTrigger value="directions">Turn-by-Turn</TabsTrigger>
+          <TabsTrigger value="analysis">Safety Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="map">
+          <Card className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="h-[500px]">
+                {currentLocation && GOOGLE_MAPS_API_KEY && (
+                  <SafeRouteMap
+                    apiKey={GOOGLE_MAPS_API_KEY}
+                    initialLocation={currentLocation}
+                    destination={destination}
+                    onRouteCalculated={handleRouteCalculated}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="directions">
+          <DirectionsPanel
+            destination={destination}
+            routeInfo={routeInfo}
+            safetyScore={safetyAnalysis?.safety_score}
+          />
+        </TabsContent>
+
+        <TabsContent value="analysis">
+          {safetyAnalysis && (
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* Safety Score Card */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Route Safety Score</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {/* ... Safety analysis content ... */}
+                </CardContent>
+              </Card>
+
+              {/* Rest of your safety analysis cards */}
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
