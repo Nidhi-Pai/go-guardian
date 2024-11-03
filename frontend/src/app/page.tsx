@@ -26,7 +26,7 @@ const quickActions = [
     title: "Plan Safe Route",
     description: "Find the safest path to your destination",
     icon: MapPin,
-    href: "/route",
+    href: "/safe-route",
     color: "bg-blue-500",
   },
   {

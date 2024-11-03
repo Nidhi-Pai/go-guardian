@@ -17,7 +17,7 @@ import {
 
 const navItems = [
   { title: "Home", path: "/", icon: Home },
-  { title: "Safe Route", path: "/route", icon: MapPin },
+  { title: "Safe Route", path: "/safe-route", icon: MapPin },
   { title: "Profile", path: "/profile", icon: User },
   { title: "Emergency Contacts", path: "/emergency-contacts", icon: Phone },
 ];
