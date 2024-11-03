@@ -49,6 +49,14 @@ interface EmergencyContact {
 
 const relationships = ['Family', 'Friend', 'Colleague', 'Neighbor', 'Other'];
 
+const relationshipColors = {
+  'Family': 'bg-red-100 text-red-800',
+  'Friend': 'bg-blue-100 text-blue-800',
+  'Colleague': 'bg-green-100 text-green-800',
+  'Neighbor': 'bg-purple-100 text-purple-800',
+  'Other': 'bg-gray-100 text-gray-800'
+};
+
 export default function EmergencyContactsPage() {
   const [contacts, setContacts] = React.useState<EmergencyContact[]>([
     {
@@ -210,7 +218,7 @@ export default function EmergencyContactsPage() {
                               {contact.email}
                             </div>
                           )}
-                          <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${relationshipColors[contact.relationship as keyof typeof relationshipColors]}`}>
                             {contact.relationship}
                           </div>
                         </div>
@@ -317,7 +325,7 @@ export default function EmergencyContactsPage() {
                       </FormControl>
                       <SelectContent>
                         {relationships.map((rel) => (
-                          <SelectItem key={rel} value={rel} className="focus:bg-primary/10">
+                          <SelectItem key={rel} value={rel} className={`focus:${relationshipColors[rel as keyof typeof relationshipColors]}`}>
                             {rel}
                           </SelectItem>
                         ))}
