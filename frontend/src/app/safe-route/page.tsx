@@ -1,9 +1,8 @@
-// src/app/route/page.tsx
-
+// src/app/safe-route/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,7 +18,7 @@ import { DirectionsPanel } from "@/components/DirectionsPanel";
 import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
 import { ContextualSafety } from "@/components/ContextualSafety";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
-import { SafetyAlert } from "@/types";
+import type { SafetyAlert } from "@/types";
 
 interface Location {
   lat: number;
@@ -43,27 +42,52 @@ interface RouteInfo {
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-export default function RoutePlannerPage() {
+export default function SafeRoutePage() {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Get user's current location
+  // Get user's current location with address lookup
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
+        async (position) => {
+          const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          });
+          };
+          
+          try {
+            // If you want to get the address for the current location
+            const response = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.lat},${location.lng}&key=${GOOGLE_MAPS_API_KEY}`
+            );
+            const data = await response.json();
+            
+            if (data.results?.[0]) {
+              setCurrentLocation({
+                ...location,
+                address: data.results[0].formatted_address,
+              });
+            } else {
+              setCurrentLocation(location);
+            }
+          } catch (err) {
+            console.error('Error getting address:', err);
+            setCurrentLocation(location);
+          }
         },
         (error) => {
           setError("Please enable location services to use route planning.");
+        },
+        { 
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
     }
@@ -73,11 +97,13 @@ export default function RoutePlannerPage() {
     if (!currentLocation) return;
 
     setLoading(true);
+    setIsAnalyzing(true);
     setError(null);
     setDestination(location);
 
     try {
-      const response = await fetch("http://localhost:5000/api/safety/analyze-route", {
+      // First, get safety analysis
+      const safetyResponse = await fetch("http://localhost:5000/api/safety/analyze-route", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -85,33 +111,61 @@ export default function RoutePlannerPage() {
         body: JSON.stringify({
           start_location: currentLocation,
           end_location: location,
+          time_of_day: getTimeOfDay()
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Server error: ${response.status}`);
+      if (!safetyResponse.ok) {
+        throw new Error(`Server error: ${safetyResponse.status}`);
       }
 
-      const analysis = await response.json();
+      const analysis = await safetyResponse.json();
       setSafetyAnalysis(analysis);
+
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to plan route");
       setDestination(null);
       setSafetyAnalysis(null);
     } finally {
       setLoading(false);
+      setIsAnalyzing(false);
     }
   };
 
-  const handleRouteCalculated = (result: google.maps.DirectionsResult) => {
+  const handleRouteCalculated = async (result: google.maps.DirectionsResult) => {
     if (!result.routes?.[0]?.legs?.[0]) return;
     
     const leg = result.routes[0].legs[0];
-    setRouteInfo({
+    const routeInfo = {
       distance: leg.distance?.text || "",
       duration: leg.duration?.text || "",
       steps: leg.steps || [],
-    });
+    };
+    
+    setRouteInfo(routeInfo);
+
+    // Optionally update safety analysis with route information
+    if (safetyAnalysis && currentLocation && destination) {
+      try {
+        const response = await fetch("http://localhost:5000/api/safety/update-analysis", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            route: routeInfo,
+            current_analysis: safetyAnalysis,
+          }),
+        });
+
+        if (response.ok) {
+          const updatedAnalysis = await response.json();
+          setSafetyAnalysis(updatedAnalysis);
+        }
+      } catch (err) {
+        console.error('Error updating safety analysis:', err);
+      }
+    }
   };
 
   const getTimeOfDay = () => {
@@ -119,8 +173,19 @@ export default function RoutePlannerPage() {
     return hour >= 6 && hour < 18 ? "day" : "night";
   };
 
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          Google Maps API key is required. Please add it to your environment variables.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto px-4 py-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -163,6 +228,11 @@ export default function RoutePlannerPage() {
               Please enable location services to use route planning
             </p>
           )}
+          {currentLocation?.address && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Current location: {currentLocation.address}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -183,7 +253,7 @@ export default function RoutePlannerPage() {
           <Card className="overflow-hidden shadow-lg">
             <CardContent className="p-0">
               <div className="h-[600px]">
-                {currentLocation && GOOGLE_MAPS_API_KEY && (
+                {currentLocation && (
                   <SafeRouteMap
                     apiKey={GOOGLE_MAPS_API_KEY}
                     initialLocation={currentLocation}
@@ -213,15 +283,15 @@ export default function RoutePlannerPage() {
       </Tabs>
 
       {/* Emergency Alert */}
-      {currentLocation && (  // Add this conditional check
-  <EmergencyAlert
-    currentLocation={currentLocation}
-    onAlertSent={(alert: SafetyAlert) => {  // Add type annotation
-      console.log('Emergency alert sent:', alert);
-      // Handle the alert as needed
-    }}
-  />
-)}
+      {currentLocation && (
+        <EmergencyAlert
+          currentLocation={currentLocation}
+          onAlertSent={(alert: SafetyAlert) => {
+            console.log('Emergency alert sent:', alert);
+            // Handle the alert as needed
+          }}
+        />
+      )}
     </div>
   );
 }
