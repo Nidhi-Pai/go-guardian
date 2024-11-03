@@ -17,6 +17,9 @@ import { SafeRouteMap } from "@/components/SafeRouteMap";
 import { LocationSearch } from "@/components/LocationSearch";
 import { DirectionsPanel } from "@/components/DirectionsPanel";
 import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
+import { ContextualSafety } from "@/components/ContextualSafety";
+import { EmergencyAlert } from "@/components/EmergencyAlert";
+import { SafetyAlert } from "@/types";
 
 interface Location {
   lat: number;
@@ -117,16 +120,19 @@ export default function RoutePlannerPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Plan Safe Route</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold">Plan Safe Route</h1>
+          <p className="text-muted-foreground mt-1">
             Find the safest path to your destination
           </p>
         </div>
-        <Badge variant={getTimeOfDay() === "day" ? "default" : "secondary"}>
+        <Badge 
+          variant={getTimeOfDay() === "day" ? "default" : "secondary"}
+          className="px-4 py-1 text-sm"
+        >
           {getTimeOfDay() === "day" ? (
             <Sun className="h-4 w-4 mr-2" />
           ) : (
@@ -145,7 +151,7 @@ export default function RoutePlannerPage() {
       )}
 
       {/* Search Bar */}
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="pt-6">
           <LocationSearch
             onLocationSelect={handleLocationSelect}
@@ -154,24 +160,29 @@ export default function RoutePlannerPage() {
           />
           {!currentLocation && (
             <p className="text-sm text-muted-foreground mt-2">
-              Please enable location services to use route planning.
+              Please enable location services to use route planning
             </p>
           )}
         </CardContent>
       </Card>
 
+      {/* Contextual Safety */}
+      {destination && (
+        <ContextualSafety location={destination} />
+      )}
+
       {/* Main Content */}
       <Tabs defaultValue="map" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
           <TabsTrigger value="map">Map View</TabsTrigger>
-          <TabsTrigger value="directions">Turn-by-Turn</TabsTrigger>
-          <TabsTrigger value="analysis">Safety Analysis</TabsTrigger>
+          <TabsTrigger value="turn-by-turn">Turn-by-Turn</TabsTrigger>
+          <TabsTrigger value="safety">Safety Analysis</TabsTrigger>
         </TabsList>
 
         <TabsContent value="map">
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden shadow-lg">
             <CardContent className="p-0">
-              <div className="h-[500px]">
+              <div className="h-[600px]">
                 {currentLocation && GOOGLE_MAPS_API_KEY && (
                   <SafeRouteMap
                     apiKey={GOOGLE_MAPS_API_KEY}
@@ -185,7 +196,7 @@ export default function RoutePlannerPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="directions">
+        <TabsContent value="turn-by-turn">
           <DirectionsPanel
             destination={destination}
             routeInfo={routeInfo}
@@ -193,24 +204,24 @@ export default function RoutePlannerPage() {
           />
         </TabsContent>
 
-        <TabsContent value="analysis">
-          {safetyAnalysis && (
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Safety Score Card */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Route Safety Score</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* ... Safety analysis content ... */}
-                </CardContent>
-              </Card>
-
-              {/* Rest of your safety analysis cards */}
-            </div>
-          )}
+        <TabsContent value="safety">
+          <SafetyAnalysisPanel 
+            safetyAnalysis={safetyAnalysis}
+            routeInfo={routeInfo}
+          />
         </TabsContent>
       </Tabs>
+
+      {/* Emergency Alert */}
+      {currentLocation && (  // Add this conditional check
+  <EmergencyAlert
+    currentLocation={currentLocation}
+    onAlertSent={(alert: SafetyAlert) => {  // Add type annotation
+      console.log('Emergency alert sent:', alert);
+      // Handle the alert as needed
+    }}
+  />
+)}
     </div>
   );
 }

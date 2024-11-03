@@ -28,14 +28,22 @@ export interface Location {
     relationship: string;
   }
   
+  
   export interface SafetyAlert {
     id: string;
     userId: string;
     location: Location;
-    type: 'sos' | 'unsafe_area' | 'deviation' | 'custom';
+    type: 'sos' | 'panic' | 'medical' | 'fire' | 'police';
     timestamp: Date;
-    status: 'active' | 'resolved';
-    description?: string;
+    status: 'active' | 'resolved' | 'cancelled';
+    isRecording: boolean;
+    mediaType: 'audio' | 'video' | null;
+    additionalInfo?: {
+      batteryLevel: number | null;
+      networkStatus: string;
+      nearestSafeSpaces: string[];
+      contactsNotified: string[];
+    };
   }
   
   export interface AIAnalysisResult {

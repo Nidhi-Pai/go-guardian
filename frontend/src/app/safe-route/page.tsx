@@ -1,37 +1,58 @@
+// src/app/route/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Map,
   AlertTriangle,
   Shield,
-  Navigation,
-  Lightbulb,
-  AlertOctagon,
-  Search,
   Sun,
   Moon,
 } from "lucide-react";
 import { SafeRouteMap } from "@/components/SafeRouteMap";
-import { aiService } from "@/lib/ai.service";
-import type { Location, Route, AIAnalysisResult } from "@/types/index";
+import { LocationSearch } from "@/components/LocationSearch";
+import { DirectionsPanel } from "@/components/DirectionsPanel";
+import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
+import { ContextualSafety } from "@/components/ContextualSafety";
+import { EmergencyAlert } from "@/components/EmergencyAlert";
+import { SafetyAlert } from "@/types";
 
-export default function SafeRoutePage() {
+interface Location {
+  lat: number;
+  lng: number;
+  address?: string;
+}
+
+interface SafetyAnalysis {
+  safety_score: number;
+  risk_level: string;
+  risks: string[];
+  recommendations: string[];
+  safe_spaces: string[];
+}
+
+interface RouteInfo {
+  distance: string;
+  duration: string;
+  steps: google.maps.DirectionsStep[];
+}
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+export default function RoutePlannerPage() {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
-  const [destination, setDestination] = useState("");
-  const [destinationCoords, setDestinationCoords] = useState<Location | null>(null);
+  const [destination, setDestination] = useState<Location | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [routeAnalysis, setRouteAnalysis] = useState<AIAnalysisResult | null>(null);
-  const [searchingAddress, setSearchingAddress] = useState(false);
+  const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
 
+  // Get user's current location
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -39,43 +60,58 @@ export default function SafeRoutePage() {
           setCurrentLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            timestamp: new Date(position.timestamp),
           });
         },
         (error) => {
-          setError("Unable to get your location. Please enable location services.");
+          setError("Please enable location services to use route planning.");
         }
       );
     }
   }, []);
 
-  const searchAddress = async () => {
-    if (!destination) return;
+  const handleLocationSelect = async (location: Location) => {
+    if (!currentLocation) return;
 
-    setSearchingAddress(true);
+    setLoading(true);
     setError(null);
+    setDestination(location);
 
     try {
-      const geocoder = new google.maps.Geocoder();
-      const result = await new Promise<google.maps.GeocoderResult[]>((resolve, reject) => {
-        geocoder.geocode({ address: destination }, (results, status) => {
-          if (status === "OK" && results) {
-            resolve(results);
-          } else {
-            reject(new Error("Could not find address"));
-          }
-        });
+      const response = await fetch("http://localhost:5000/api/safety/analyze-route", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          start_location: currentLocation,
+          end_location: location,
+        }),
       });
 
-      setDestinationCoords({
-        lat: result[0].geometry.location.lat(),
-        lng: result[0].geometry.location.lng(),
-      });
+      if (!response.ok) {
+        throw new Error(`Server error: ${response.status}`);
+      }
+
+      const analysis = await response.json();
+      setSafetyAnalysis(analysis);
     } catch (err) {
-      setError("Could not find the specified address. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to plan route");
+      setDestination(null);
+      setSafetyAnalysis(null);
     } finally {
-      setSearchingAddress(false);
+      setLoading(false);
     }
+  };
+
+  const handleRouteCalculated = (result: google.maps.DirectionsResult) => {
+    if (!result.routes?.[0]?.legs?.[0]) return;
+    
+    const leg = result.routes[0].legs[0];
+    setRouteInfo({
+      distance: leg.distance?.text || "",
+      duration: leg.duration?.text || "",
+      steps: leg.steps || [],
+    });
   };
 
   const getTimeOfDay = () => {
@@ -83,22 +119,20 @@ export default function SafeRoutePage() {
     return hour >= 6 && hour < 18 ? "day" : "night";
   };
 
-  const getRiskColor = (score: number) => {
-    if (score > 70) return "text-green-500";
-    if (score > 40) return "text-yellow-500";
-    return "text-red-500";
-  };
-
   return (
-    <div className="container space-y-6">
+    <div className="space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Plan Safe Route</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-4xl font-bold">Plan Safe Route</h1>
+          <p className="text-muted-foreground mt-1">
             Find the safest path to your destination
           </p>
         </div>
-        <Badge variant={getTimeOfDay() === "day" ? "default" : "secondary"}>
+        <Badge 
+          variant={getTimeOfDay() === "day" ? "default" : "secondary"}
+          className="px-4 py-1 text-sm"
+        >
           {getTimeOfDay() === "day" ? (
             <Sun className="h-4 w-4 mr-2" />
           ) : (
@@ -108,6 +142,7 @@ export default function SafeRoutePage() {
         </Badge>
       </div>
 
+      {/* Error Display */}
       {error && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -115,187 +150,78 @@ export default function SafeRoutePage() {
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Navigation className="h-5 w-5 mr-2" />
-            Route Planning
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Enter your destination"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="pl-9"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    searchAddress();
-                  }
-                }}
-              />
-            </div>
-            <Button
-              onClick={searchAddress}
-              disabled={!destination || searchingAddress}
-              className="min-w-[120px]"
-            >
-              {searchingAddress ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2" />
-                  Searching
-                </div>
-              ) : (
-                <span className="flex items-center">
-                  <Map className="h-4 w-4 mr-2" />
-                  Find Route
-                </span>
-              )}
-            </Button>
-          </div>
+      {/* Search Bar */}
+      <Card className="shadow-lg">
+        <CardContent className="pt-6">
+          <LocationSearch
+            onLocationSelect={handleLocationSelect}
+            loading={loading}
+            disabled={!currentLocation}
+          />
+          {!currentLocation && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Please enable location services to use route planning
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {currentLocation && (
-        <Tabs defaultValue="map" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="map" className="flex items-center">
-              <Map className="h-4 w-4 mr-2" />
-              Map View
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="flex items-center">
-              <Shield className="h-4 w-4 mr-2" />
-              Safety Analysis
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="map">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="h-[500px] rounded-lg overflow-hidden">
-                  <SafeRouteMap
-                    apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
-                    initialLocation={currentLocation}
-                    destination={destinationCoords}
-                    onRouteCalculated={async (route: any) => {
-                      setLoading(true);
-                      try {
-                        const analysis = await aiService.analyzeRoute(route);
-                        setRouteAnalysis(analysis);
-                      } catch (err) {
-                        setError("Failed to analyze route safety");
-                      } finally {
-                        setLoading(false);
-                      }
-                    }}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="analysis">
-            {loading ? (
-              <Card>
-                <CardContent className="flex items-center justify-center py-8">
-                  <div className="space-y-2 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
-                    <p className="text-sm text-muted-foreground">
-                      Analyzing route safety...
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : routeAnalysis ? (
-              <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Safety Score</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold">
-                          {routeAnalysis.safetyScore}%
-                        </span>
-                        <Shield className={getRiskColor(routeAnalysis.safetyScore)} />
-                      </div>
-                      <Progress
-                        value={routeAnalysis.safetyScore}
-                        className="h-2"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        {routeAnalysis.safetyScore > 70
-                          ? "This route appears to be safe"
-                          : routeAnalysis.safetyScore > 40
-                          ? "Exercise caution on this route"
-                          : "Consider alternative routes"}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Lightbulb className="h-5 w-5 mr-2" />
-                      Safety Recommendations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {routeAnalysis.recommendations.map((rec, index) => (
-                        <div key={index} className="flex items-start space-x-2">
-                          <div className="h-6 w-6 flex items-center justify-center rounded-full bg-primary/10">
-                            <Lightbulb className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="text-sm">{rec}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="md:col-span-2">
-                  <CardHeader>
-                    <CardTitle className="flex items-center text-destructive">
-                      <AlertOctagon className="h-5 w-5 mr-2" />
-                      Potential Risks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      {routeAnalysis.threats.map((threat, index) => (
-                        <Alert key={index} variant="destructive">
-                          <AlertTriangle className="h-4 w-4 mr-2" />
-                          <AlertDescription>{threat}</AlertDescription>
-                        </Alert>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="py-8 text-center">
-                  <div className="space-y-2">
-                    <Map className="h-12 w-12 mx-auto text-muted-foreground" />
-                    <p className="text-lg font-medium">
-                      Enter a destination to see route analysis
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      We'll analyze the safety of your route and provide recommendations
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
+      {/* Contextual Safety */}
+      {destination && (
+        <ContextualSafety location={destination} />
       )}
+
+      {/* Main Content */}
+      <Tabs defaultValue="map" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
+          <TabsTrigger value="map">Map View</TabsTrigger>
+          <TabsTrigger value="turn-by-turn">Turn-by-Turn</TabsTrigger>
+          <TabsTrigger value="safety">Safety Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="map">
+          <Card className="overflow-hidden shadow-lg">
+            <CardContent className="p-0">
+              <div className="h-[600px]">
+                {currentLocation && GOOGLE_MAPS_API_KEY && (
+                  <SafeRouteMap
+                    apiKey={GOOGLE_MAPS_API_KEY}
+                    initialLocation={currentLocation}
+                    destination={destination}
+                    onRouteCalculated={handleRouteCalculated}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="turn-by-turn">
+          <DirectionsPanel
+            destination={destination}
+            routeInfo={routeInfo}
+            safetyScore={safetyAnalysis?.safety_score}
+          />
+        </TabsContent>
+
+        <TabsContent value="safety">
+          <SafetyAnalysisPanel 
+            safetyAnalysis={safetyAnalysis}
+            routeInfo={routeInfo}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Emergency Alert */}
+      {currentLocation && (  // Add this conditional check
+  <EmergencyAlert
+    currentLocation={currentLocation}
+    onAlertSent={(alert: SafetyAlert) => {  // Add type annotation
+      console.log('Emergency alert sent:', alert);
+      // Handle the alert as needed
+    }}
+  />
+)}
     </div>
   );
 }
