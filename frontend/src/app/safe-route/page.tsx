@@ -14,7 +14,7 @@ import {
   Moon,
 } from "lucide-react";
 import { SafeRouteMap } from "@/components/SafeRouteMap";
-import { LocationSearch } from "@/components/LocationSearch";
+import LocationSearch from "@/components/LocationSearch";
 import { DirectionsPanel } from "@/components/DirectionsPanel";
 import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
 import { ContextualSafety } from "@/components/ContextualSafety";
