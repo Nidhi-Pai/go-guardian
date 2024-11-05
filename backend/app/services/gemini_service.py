@@ -68,7 +68,6 @@ class GeminiService:
             
             Focus on practical, actionable safety insights.
             """
-
             response = self.text_model.generate_content(
                 prompt,
                 generation_config=self.generation_config

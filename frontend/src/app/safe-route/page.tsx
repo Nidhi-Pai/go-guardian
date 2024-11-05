@@ -105,6 +105,41 @@ export default function SafeRoutePage() {
     }
   }, []);
 
+  const analyzeSafetyForRoute = async (
+    start: Location,
+    end: Location,
+    routeDetails: RouteInfo
+  ): Promise<SafetyAnalysis | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/safety/analyze-route`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          start_location: start,
+          end_location: end,
+          distance: routeDetails.distance,
+          time_of_day: getTimeOfDay(),
+          weather: "Clear" // TODO: Integrate with weather API
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to analyze route safety');
+      }
+  
+      const data: RouteResponse = await response.json();
+      if (data.status === 'success' && data.data?.analysis) {
+        return data.data.analysis;
+      }
+      throw new Error(data.error || 'Failed to analyze route');
+    } catch (err) {
+      console.error('Error analyzing route safety:', err);
+      return null;
+    }
+  };
+
   const handleLocationSelect = async (location: Location) => {
     if (!currentLocation) return;
 
@@ -175,12 +210,10 @@ export default function SafeRoutePage() {
     }
   };
 
-  const handleRouteCalculated = async (result: google.maps.DirectionsResult) => {
-    if (!result.routes?.[0]?.legs?.[0]) return;
+  const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
+    if (!route.routes?.[0]?.legs?.[0]) return;
     
-    console.log('🔵 Route calculated:', result);
-    
-    const leg = result.routes[0].legs[0];
+    const leg = route.routes[0].legs[0];
     const routeInfo = {
       distance: leg.distance?.text || "",
       duration: leg.duration?.text || "",
@@ -188,39 +221,6 @@ export default function SafeRoutePage() {
     };
     
     setRouteInfo(routeInfo);
-    console.log('🟢 Updated route info:', routeInfo);
-
-    // Update active route if we have one
-    if (activeRouteId && safetyAnalysis && currentLocation && destination) {
-      try {
-        console.log('🔵 Updating active route:', activeRouteId);
-        const response = await fetch(`${API_BASE_URL}/api/safety/active-route/${activeRouteId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            route: routeInfo,
-            current_analysis: safetyAnalysis,
-          }),
-        });
-
-        if (!response.ok) {
-          console.error('🔴 Failed to update active route:', response.statusText);
-          return;
-        }
-
-        const updatedData = await response.json();
-        console.log('🟢 Route update response:', updatedData);
-        
-        if (updatedData.status === 'success' && updatedData.data) {
-          setSafetyAnalysis(updatedData.data.analysis);
-          console.log('🟢 Updated safety analysis:', updatedData.data.analysis);
-        }
-      } catch (err) {
-        console.error('🔴 Error updating route analysis:', err);
-      }
-    }
   };
 
   const getTimeOfDay = () => {
