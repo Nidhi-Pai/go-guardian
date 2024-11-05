@@ -18,12 +18,13 @@ def create_app():
         app.config.from_object(Config)
     except ValueError as e:
         print(f"Configuration error: {e}")
+        
     
     # Enable CORS - Updated configuration
     CORS(app, 
          resources={
              r"/api/*": {
-                 "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+                 "origins": ["http://localhost:3000"],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                  "allow_headers": ["Content-Type", "Authorization"],
                  "supports_credentials": True
@@ -46,6 +47,25 @@ def create_app():
         print(f"Error initializing Gemini service: {e}")
         app.gemini_service = None
     
+    # Debug route
+    @app.route('/debug/routes')
+    def list_routes():
+        routes = []
+        for rule in app.url_map.iter_rules():
+            routes.append({
+                'endpoint': rule.endpoint,
+                'methods': list(rule.methods),
+                'path': str(rule)
+            })
+        return jsonify(routes)
+    
+    # Initialize database
+    with app.app_context():
+        db.create_all()
+        app.logger.info("Database initialized")
+        
+    return app
+
     @app.after_request
     def after_request(response):
         response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')

@@ -1,4 +1,5 @@
-// src/app/safe-route/page.tsx
+// frontend/src/app/safe-route/page.tsx
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -20,6 +21,9 @@ import { ContextualSafety } from "@/components/ContextualSafety";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
 import type { SafetyAlert } from "@/types";
 
+// Update API base URL to match your Flask backend
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface Location {
   lat: number;
   lng: number;
@@ -40,6 +44,16 @@ interface RouteInfo {
   steps: google.maps.DirectionsStep[];
 }
 
+interface RouteResponse {
+  status: string;
+  data?: {
+    route_id: number;
+    analysis: SafetyAnalysis;
+    distance: number;
+  };
+  error?: string;
+}
+
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 export default function SafeRoutePage() {
@@ -50,8 +64,8 @@ export default function SafeRoutePage() {
   const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [activeRouteId, setActiveRouteId] = useState<number | null>(null);
 
-  // Get user's current location with address lookup
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
@@ -62,16 +76,14 @@ export default function SafeRoutePage() {
           };
           
           try {
-            // If you want to get the address for the current location
-            const response = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${location.lat},${location.lng}&key=${GOOGLE_MAPS_API_KEY}`
-            );
-            const data = await response.json();
+            // Use Google Maps Geocoding service directly instead of API call
+            const geocoder = new google.maps.Geocoder();
+            const result = await geocoder.geocode({ location });
             
-            if (data.results?.[0]) {
+            if (result.results?.[0]) {
               setCurrentLocation({
                 ...location,
-                address: data.results[0].formatted_address,
+                address: result.results[0].formatted_address,
               });
             } else {
               setCurrentLocation(location);
@@ -99,11 +111,34 @@ export default function SafeRoutePage() {
     setLoading(true);
     setIsAnalyzing(true);
     setError(null);
-    setDestination(location);
-
+    
     try {
-      // First, get safety analysis
-      const safetyResponse = await fetch("http://localhost:5000/api/safety/analyze-route", {
+      // Keep the destination state update after route calculation
+      const directionsService = new google.maps.DirectionsService();
+      const routeResult = await directionsService.route({
+        origin: { lat: currentLocation.lat, lng: currentLocation.lng },
+        destination: { lat: location.lat, lng: location.lng },
+        travelMode: google.maps.TravelMode.WALKING,
+      });
+
+      if (!routeResult.routes?.[0]?.legs?.[0]) {
+        throw new Error("Could not calculate route");
+      }
+
+      const leg = routeResult.routes[0].legs[0];
+      const routeDetails = {
+        distance: leg.distance?.text || "",
+        duration: leg.duration?.text || "",
+        steps: leg.steps || [],
+      };
+      
+      // Set route info before making the safety analysis request
+      setRouteInfo(routeDetails);
+      
+      // Now set destination after successful route calculation
+      setDestination(location);
+
+      const safetyResponse = await fetch(`${API_BASE_URL}/api/safety/analyze-route`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -111,21 +146,29 @@ export default function SafeRoutePage() {
         body: JSON.stringify({
           start_location: currentLocation,
           end_location: location,
+          distance: routeDetails.distance,
           time_of_day: getTimeOfDay()
         }),
       });
 
       if (!safetyResponse.ok) {
-        throw new Error(`Server error: ${safetyResponse.status}`);
+        const errorText = await safetyResponse.text();
+        throw new Error(`Server error: ${safetyResponse.status} - ${errorText}`);
       }
 
-      const analysis = await safetyResponse.json();
-      setSafetyAnalysis(analysis);
+      const responseData: RouteResponse = await safetyResponse.json();
+      
+      if (responseData.status === 'success' && responseData.data) {
+        setSafetyAnalysis(responseData.data.analysis);
+        setActiveRouteId(responseData.data.route_id);
+      } else {
+        throw new Error(responseData.error || 'Failed to analyze route');
+      }
 
     } catch (err) {
+      console.error('🔴 Route analysis error:', err);
       setError(err instanceof Error ? err.message : "Failed to plan route");
-      setDestination(null);
-      setSafetyAnalysis(null);
+      // Don't reset destination and safety analysis on error
     } finally {
       setLoading(false);
       setIsAnalyzing(false);
@@ -135,6 +178,8 @@ export default function SafeRoutePage() {
   const handleRouteCalculated = async (result: google.maps.DirectionsResult) => {
     if (!result.routes?.[0]?.legs?.[0]) return;
     
+    console.log('🔵 Route calculated:', result);
+    
     const leg = result.routes[0].legs[0];
     const routeInfo = {
       distance: leg.distance?.text || "",
@@ -143,12 +188,14 @@ export default function SafeRoutePage() {
     };
     
     setRouteInfo(routeInfo);
+    console.log('🟢 Updated route info:', routeInfo);
 
-    // Optionally update safety analysis with route information
-    if (safetyAnalysis && currentLocation && destination) {
+    // Update active route if we have one
+    if (activeRouteId && safetyAnalysis && currentLocation && destination) {
       try {
-        const response = await fetch("http://localhost:5000/api/safety/update-analysis", {
-          method: "POST",
+        console.log('🔵 Updating active route:', activeRouteId);
+        const response = await fetch(`${API_BASE_URL}/api/safety/active-route/${activeRouteId}`, {
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
@@ -158,12 +205,20 @@ export default function SafeRoutePage() {
           }),
         });
 
-        if (response.ok) {
-          const updatedAnalysis = await response.json();
-          setSafetyAnalysis(updatedAnalysis);
+        if (!response.ok) {
+          console.error('🔴 Failed to update active route:', response.statusText);
+          return;
+        }
+
+        const updatedData = await response.json();
+        console.log('🟢 Route update response:', updatedData);
+        
+        if (updatedData.status === 'success' && updatedData.data) {
+          setSafetyAnalysis(updatedData.data.analysis);
+          console.log('🟢 Updated safety analysis:', updatedData.data.analysis);
         }
       } catch (err) {
-        console.error('Error updating safety analysis:', err);
+        console.error('🔴 Error updating route analysis:', err);
       }
     }
   };

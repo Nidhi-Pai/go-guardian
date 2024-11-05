@@ -77,8 +77,6 @@ export function SafeRouteMap({
 
   React.useEffect(() => {
     if (destination && directionsService && directionsRenderer && map) {
-      setError(null);
-      
       directionsService.route({
         origin: initialLocation,
         destination: destination,

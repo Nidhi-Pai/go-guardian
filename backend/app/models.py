@@ -17,6 +17,32 @@ class User(db.Model):
     contacts = db.relationship('EmergencyContact', backref='user', lazy=True)
     monitoring_sessions = db.relationship('MonitoringSession', backref='user', lazy=True)
     voice_commands = db.relationship('VoiceCommand', backref='user', lazy=True)
+    routes = db.relationship('Route', backref='user', lazy=True) 
+    
+class Route(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    start_location = db.Column(db.String(200), nullable=False)
+    end_location = db.Column(db.String(200), nullable=False)
+    distance = db.Column(db.Float, nullable=False)
+    safety_score = db.Column(db.Float)
+    status = db.Column(db.String(20), default='active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'start_location': self.start_location,
+            'end_location': self.end_location,
+            'distance': self.distance,
+            'safety_score': self.safety_score,
+            'status': self.status,
+            'start_time': self.start_time.isoformat() if self.start_time else None,
+            'end_time': self.end_time.isoformat() if self.end_time else None,
+            'created_at': self.created_at.isoformat()
+        }
 
 class Alert(db.Model):
     id = db.Column(db.Integer, primary_key=True)

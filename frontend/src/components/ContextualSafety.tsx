@@ -1,64 +1,93 @@
-// src/components/ContextualSafety.tsx
-
-"use client";
+// frontend/components/ContextualSafety.tsx
 
 import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import {
-  Shield,
-  Clock,
-  Users,
-  Sun,
-  Moon,
-  Building,
-  Train,
-  AlertTriangle
-} from "lucide-react";
+import { Card, CardContent } from '@/components/ui/card';
+import { Shield, AlertTriangle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Location {
   lat: number;
   lng: number;
+  address?: string;
+}
+
+interface SafetyContext {
+  safety_score: number;
+  risk_level: string;
+  risks: string[];
+  recommendations: string[];
+  safe_spaces: string[];
 }
 
 interface ContextualSafetyProps {
   location: Location;
 }
 
-interface SafetyContext {
-  timeOfDay: 'day' | 'night';
-  crowdDensity: string;
-  nearbyTransit: string[];
-  safeSpaces: string[];
-  businessHours: string[];
-  riskFactors: string[];
-  safetyTips: string[];
-}
+const logger = {
+  info: (message: string, data?: any) => {
+    console.log(`[${new Date().toISOString()}] ${message}`, data || '');
+  },
+  error: (message: string, error?: any) => {
+    console.error(`[${new Date().toISOString()}] ${message}`, error || '');
+  }
+};
 
 export function ContextualSafety({ location }: ContextualSafetyProps) {
   const [context, setContext] = useState<SafetyContext | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchContextData = async () => {
+      if (!location?.lat || !location?.lng) return;
+      
+      setLoading(true);
+      setError(null);
+      
+      logger.info('Fetching safety analysis for location:', {
+        lat: location.lat,
+        lng: location.lng
+      });
+      
       try {
-        const response = await fetch('http://localhost:5000/api/safety/context', {
+        const response = await fetch(`${API_BASE_URL}/api/safety/analyze-area`, {
           method: 'POST',
           headers: {
+            'Accept': 'application/json',
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            location,
-            timestamp: new Date().toISOString()
-          }),
+            location: {
+              lat: location.lat,
+              lng: location.lng,
+              address: location.address
+            }
+          })
         });
 
-        if (!response.ok) throw new Error('Failed to fetch safety context');
-        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+
         const data = await response.json();
-        setContext(data);
-      } catch (error) {
-        console.error('Context fetch error:', error);
+        logger.info('Received server response:', data);
+        
+        if (data.status === 'success' && data.data) {
+          logger.info('Setting safety context:', data.data);
+          setContext(data.data);
+        } else if (data.status === 'error') {
+          throw new Error(data.error);
+        } else {
+          throw new Error('Invalid response format from server');
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch safety context';
+        logger.error('Failed to fetch safety context:', err);
+        setError(errorMessage);
+        setContext(null);
       } finally {
         setLoading(false);
       }
@@ -67,71 +96,79 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
     fetchContextData();
   }, [location]);
 
-  if (!context) return null;
-
-  return (
-    <div className="space-y-4">
+  if (loading) {
+    return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Current Area Safety
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                {context.timeOfDay === 'day' ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-                {context.timeOfDay === 'day' ? 'Daytime' : 'Nighttime'}
-              </Badge>
-              
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                <Users className="h-4 w-4" />
-                {context.crowdDensity} Foot Traffic
-              </Badge>
-
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                <Clock className="h-4 w-4" />
-                {context.businessHours[0]}
-              </Badge>
-            </div>
-
-            <div className="space-y-2">
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                <Train className="h-4 w-4" />
-                {context.nearbyTransit.length} Transit Options
-              </Badge>
-              
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                <Building className="h-4 w-4" />
-                {context.safeSpaces.length} Safe Spaces
-              </Badge>
-              
-              <Badge variant="outline" className="w-full justify-start gap-2">
-                <AlertTriangle className="h-4 w-4" />
-                {context.riskFactors.length} Risk Factors
-              </Badge>
-            </div>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <h4 className="font-medium">Safety Tips</h4>
-            <ul className="space-y-1">
-              {context.safetyTips.map((tip, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm">
-                  <Shield className="h-4 w-4 mt-0.5 shrink-0 text-primary" />
-                  {tip}
-                </li>
-              ))}
-            </ul>
+        <CardContent className="p-6">
+          <div className="flex items-center space-x-2">
+            <Shield className="h-5 w-5 animate-pulse" />
+            <p>Analyzing area safety...</p>
           </div>
         </CardContent>
       </Card>
-    </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertDescription>
+          {error}
+          <button 
+            onClick={() => window.location.reload()} 
+            className="ml-2 underline"
+          >
+            Retry
+          </button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!context) return null;
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Shield className="h-5 w-5" />
+              <h3 className="font-semibold">Area Safety Score: {context.safety_score}</h3>
+            </div>
+            <div className={`px-3 py-1 rounded-full text-sm ${
+              context.risk_level === 'low' ? 'bg-green-100 text-green-800' :
+              context.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+              {context.risk_level.charAt(0).toUpperCase() + context.risk_level.slice(1)} Risk
+            </div>
+          </div>
+
+          {context.risks.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Potential Risks:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                {context.risks.map((risk, index) => (
+                  <li key={index} className="text-sm">{risk}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {context.recommendations.length > 0 && (
+            <div>
+              <h4 className="font-medium mb-2">Safety Recommendations:</h4>
+              <ul className="list-disc pl-5 space-y-1">
+                {context.recommendations.map((rec, index) => (
+                  <li key={index} className="text-sm">{rec}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
