@@ -42,6 +42,9 @@ export function EmergencyAlert({
   const [isOpen, setIsOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
   const [alertTriggered, setAlertTriggered] = useState(false);
+  const [confirmationMode, setConfirmationMode] = useState(false);
+  const [shakeCount, setShakeCount] = useState(0);
+  const shakeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
@@ -94,6 +97,7 @@ export function EmergencyAlert({
     let lastX = 0, lastY = 0, lastZ = 0;
     let lastTime = new Date().getTime();
     const SHAKE_THRESHOLD = 15;
+    const SHAKE_TIMEOUT = 3000; // Reset shake count after 3 seconds of no shaking
 
     const handleMotion = (event: DeviceMotionEvent) => {
       const current = event.accelerationIncludingGravity;
@@ -108,8 +112,26 @@ export function EmergencyAlert({
         const deltaZ = Math.abs(current.z! - lastZ);
 
         if (deltaX + deltaY + deltaZ > SHAKE_THRESHOLD) {
-          setShakeDetected(true);
-          setIsOpen(true);
+          // Clear existing timeout
+          if (shakeTimeoutRef.current) {
+            clearTimeout(shakeTimeoutRef.current);
+          }
+
+          // Increment shake count
+          setShakeCount(prev => {
+            const newCount = prev + 1;
+            if (newCount >= 5) {
+              setIsOpen(true);
+              setConfirmationMode(true);
+              return 0; // Reset count after triggering
+            }
+            return newCount;
+          });
+
+          // Set timeout to reset shake count
+          shakeTimeoutRef.current = setTimeout(() => {
+            setShakeCount(0);
+          }, SHAKE_TIMEOUT);
         }
 
         lastX = current.x!;
@@ -127,21 +149,25 @@ export function EmergencyAlert({
       if (window.DeviceMotionEvent) {
         window.removeEventListener('devicemotion', handleMotion);
       }
+      if (shakeTimeoutRef.current) {
+        clearTimeout(shakeTimeoutRef.current);
+      }
     };
   }, []);
 
   // Countdown timer
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (isOpen && countdown > 0 && !alertTriggered) {
+    if (isOpen && confirmationMode && countdown > 0) {
       timer = setTimeout(() => setCountdown(count => count - 1), 1000);
-    } else if (countdown === 0 && !alertTriggered) {
-      handleSendAlert();
+    } else if (countdown === 0) {
+      setConfirmationMode(false);
+      setCountdown(5);
     }
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [isOpen, countdown, alertTriggered]);
+  }, [isOpen, countdown, confirmationMode]);
 
   // Clean up on unmount
   useEffect(() => {
@@ -298,9 +324,37 @@ export function EmergencyAlert({
     </div>
   );
 
+  const ShakeProgress = () => (
+    shakeCount > 0 && (
+      <div className="absolute -top-16 right-0 bg-background border rounded-lg p-2 shadow-lg">
+        <div className="flex items-center gap-2">
+          <span className="text-sm">Shake {5 - shakeCount} more times</span>
+          <div className="flex gap-1">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className={`w-2 h-2 rounded-full ${
+                  i < shakeCount ? 'bg-destructive' : 'bg-muted'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  );
+
   return (
     <div className="fixed bottom-6 right-6">
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <ShakeProgress />
+      <Dialog open={isOpen} onOpenChange={(open) => {
+        setIsOpen(open);
+        if (!open) {
+          setConfirmationMode(false);
+          setCountdown(5);
+          setShakeCount(0);
+        }
+      }}>
         <DialogTrigger asChild>
           <Button 
             variant="destructive" 
@@ -322,88 +376,111 @@ export function EmergencyAlert({
           <DialogHeader>
             <DialogTitle className="flex items-center text-destructive">
               <AlertTriangle className="h-5 w-5 mr-2" />
-              Emergency Alert
+              {confirmationMode ? "Confirm Emergency Alert" : "Emergency Alert"}
             </DialogTitle>
             <DialogDescription>
-              {alertTriggered 
-                ? "Emergency services have been notified"
-                : `Emergency services will be notified in ${countdown} seconds`
-              }
+              {confirmationMode ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-destructive">{countdown}</span>
+                  <span>seconds to cancel emergency alert</span>
+                </div>
+              ) : (
+                "Choose an action below"
+              )}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-2 gap-4 my-4">
-            <QuickAction
-              icon={Phone}
-              label="Call Emergency"
-              variant="destructive"
-              onClick={() => {
-                window.location.href = 'tel:911';
-              }}
-            />
-            <QuickAction
-              icon={Share2}
-              label="Alert Contacts"
-              onClick={handleSendAlert}
-            />
-            <QuickAction
-              icon={Video}
-              label={isRecording && recordingType === 'video' ? "Stop Recording" : "Record Video"}
-              onClick={() => {
-                if (isRecording) {
-                  stopRecording();
-                } else {
-                  startRecording('video');
-                }
-              }}
-            />
-            <QuickAction
-              icon={Mic}
-              label={isRecording && recordingType === 'audio' ? "Stop Audio" : "Record Audio"}
-              onClick={() => {
-                if (isRecording) {
-                  stopRecording();
-                } else {
-                  startRecording('audio');
-                }
-              }}
-            />
-          </div>
+          {!confirmationMode ? (
+            <>
+              <div className="grid grid-cols-2 gap-4 my-4">
+                <QuickAction
+                  icon={Phone}
+                  label="Emergency Call"
+                  variant="destructive"
+                  onClick={() => {
+                    setConfirmationMode(true);
+                    setCountdown(5);
+                  }}
+                />
+                <QuickAction
+                  icon={Share2}
+                  label="Alert Contacts"
+                  onClick={handleSendAlert}
+                />
+                <QuickAction
+                  icon={Video}
+                  label={isRecording && recordingType === 'video' ? "Stop Recording" : "Record Video"}
+                  onClick={() => {
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording('video');
+                    }
+                  }}
+                />
+                <QuickAction
+                  icon={Mic}
+                  label={isRecording && recordingType === 'audio' ? "Stop Audio" : "Record Audio"}
+                  onClick={() => {
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      startRecording('audio');
+                    }
+                  }}
+                />
+              </div>
 
-          <DeviceStatus />
+              <DeviceStatus />
 
-          <Alert variant="destructive">
-            <Shield className="h-4 w-4" />
-            <AlertDescription>
-              This will:
-              <ul className="list-disc ml-6 mt-2">
-                <li>Alert emergency services</li>
-                <li>Share your current location</li>
-                <li>Notify your emergency contacts</li>
-                <li>Begin recording audio/video (if enabled)</li>
-              </ul>
-            </AlertDescription>
-          </Alert>
+              <Alert>
+                <Shield className="h-4 w-4" />
+                <AlertDescription>
+                  Select an action above. Emergency calls will require confirmation.
+                </AlertDescription>
+              </Alert>
+            </>
+          ) : (
+            <>
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="font-bold">
+                  You are about to contact emergency services.
+                </AlertDescription>
+              </Alert>
 
-          <DialogFooter className="sm:justify-start gap-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsOpen(false);
-                setCountdown(5);
-                setAlertTriggered(false);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleSendAlert}
-              className="flex-1"
-            >
-              Send Alert Now
-            </Button>
-          </DialogFooter>
+              <div className="space-y-4">
+                <p>Are you sure you want to:</p>
+                <ul className="list-disc ml-6">
+                  <li>Alert emergency services</li>
+                  <li>Share your current location</li>
+                  <li>Notify emergency contacts</li>
+                </ul>
+              </div>
+
+              <DialogFooter className="sm:justify-start gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setConfirmationMode(false);
+                    setCountdown(5);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    window.location.href = 'tel:911';
+                    handleSendAlert();
+                  }}
+                  className="flex-1"
+                >
+                  Confirm Emergency Call
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
