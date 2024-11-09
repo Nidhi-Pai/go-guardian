@@ -20,9 +20,12 @@ interface RouteInfo {
 interface SafetyAnalysis {
   safety_score: number;
   risk_level: string;
-  risks: string[];
+  primary_concerns: string[];
   recommendations: string[];
-  safe_spaces: string[];
+  safe_spots: string[];
+  emergency_resources: string[];
+  safer_alternatives?: string[];
+  confidence_score: number;
 }
 
 interface SafetyAnalysisPanelProps {
@@ -102,7 +105,7 @@ export function SafetyAnalysisPanel({
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {safetyAnalysis.risks.map((risk, index) => (
+            {safetyAnalysis.primary_concerns.map((risk, index) => (
               <div key={index} className="flex items-start gap-2">
                 <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <span>{risk}</span>
@@ -136,7 +139,7 @@ export function SafetyAnalysisPanel({
         </CardHeader>
         <CardContent>
           <div className="grid gap-2">
-            {safetyAnalysis.safe_spaces.map((space, index) => (
+            {safetyAnalysis.safe_spots.map((space, index) => (
               <div
                 key={index}
                 className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50"

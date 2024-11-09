@@ -51,6 +51,17 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
         lng: location.lng
       });
       
+      console.log('Sending request:', {
+        url: `${API_BASE_URL}/api/safety/analyze-area`,
+        body: {
+          location: {
+            lat: location.lat,
+            lng: location.lng,
+            address: location.address
+          }
+        }
+      });
+      
       try {
         const response = await fetch(`${API_BASE_URL}/api/safety/analyze-area`, {
           method: 'POST',
@@ -67,19 +78,20 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
           })
         });
 
+        console.log('Response status:', response.status);
+        const responseData = await response.json();
+        console.log('Received response:', responseData);
+
         if (!response.ok) {
           const errorText = await response.text();
           throw new Error(`Server error: ${response.status} - ${errorText}`);
         }
 
-        const data = await response.json();
-        logger.info('Received server response:', data);
-        
-        if (data.status === 'success' && data.data) {
-          logger.info('Setting safety context:', data.data);
-          setContext(data.data);
-        } else if (data.status === 'error') {
-          throw new Error(data.error);
+        if (responseData.status === 'success' && responseData.data) {
+          logger.info('Setting safety context:', responseData.data);
+          setContext(responseData.data);
+        } else if (responseData.status === 'error') {
+          throw new Error(responseData.error);
         } else {
           throw new Error('Invalid response format from server');
         }

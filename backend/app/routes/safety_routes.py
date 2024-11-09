@@ -9,6 +9,7 @@ import re
 import traceback
 import logging
 from typing import Dict, Any
+import uuid
 
 # Configure logging
 logging.basicConfig(
@@ -54,112 +55,37 @@ def prepare_route_data(data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error preparing route data: {str(e)}")
         raise
 
-@safety_bp.route('/analyze-route', methods=['POST', 'OPTIONS'])
+@safety_bp.route('/analyze-route', methods=['POST'])
 @cross_origin()
 def analyze_route():
-    """Analyze route safety and store results."""
-    request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
-    logger.info(f"[RequestID: {request_id}] New route analysis request received")
-
-    if request.method == 'OPTIONS':
-        logger.debug(f"[RequestID: {request_id}] Handling OPTIONS request")
-        return {'success': True}, 200
-        
     try:
-        # Get and validate request data
         data = request.get_json()
-        logger.info(f"[RequestID: {request_id}] Raw request data: {data}")
         
-        if not data:
-            logger.warning(f"[RequestID: {request_id}] No data provided in request")
-            return jsonify({'status': 'error', 'error': 'No data provided'}), 400
-
-        # Validate required fields
-        required_fields = ['start_location', 'end_location', 'distance']
-        missing_fields = [field for field in required_fields if field not in data]
-        if missing_fields:
-            logger.warning(f"[RequestID: {request_id}] Missing required fields: {missing_fields}")
+        if not data or not all(k in data for k in ['start_location', 'end_location']):
             return jsonify({
                 'status': 'error',
-                'error': f'Missing required fields: {", ".join(missing_fields)}'
+                'error': 'Missing required location data'
             }), 400
 
-        # Parse distance
-        logger.info(f"[RequestID: {request_id}] Parsing distance value")
-        distance_value = parse_distance(data['distance'])
-        logger.debug(f"[RequestID: {request_id}] Parsed distance value: {distance_value}")
-
-        # Prepare route data
-        try:
-            logger.info(f"[RequestID: {request_id}] Preparing route data")
-            route_data = prepare_route_data(data)
-        except Exception as e:
-            logger.error(f"[RequestID: {request_id}] Error preparing route data: {str(e)}\n{traceback.format_exc()}")
-            return jsonify({
-                'status': 'error',
-                'error': 'Error preparing route data'
-            }), 500
-
-        # Get AI analysis
-        try:
-            logger.info(f"[RequestID: {request_id}] Requesting AI analysis")
-            analysis = gemini_service.analyze_route(route_data)
-            logger.debug(f"[RequestID: {request_id}] AI analysis result: {analysis}")
-
-            if not isinstance(analysis, dict):
-                logger.error(f"[RequestID: {request_id}] Invalid analysis result format")
-                return jsonify({
-                    'status': 'error',
-                    'error': 'Invalid analysis result format'
-                }), 500
-
-        except Exception as e:
-            logger.error(f"[RequestID: {request_id}] AI analysis error: {str(e)}\n{traceback.format_exc()}")
-            return jsonify({
-                'status': 'error',
-                'error': 'Error during AI analysis'
-            }), 500
-
-        # Save to database
-        try:
-            logger.info(f"[RequestID: {request_id}] Saving route to database")
-            new_route = Route(
-                user_id=1,  # TODO: Get from authentication
-                start_location=str(data['start_location']),
-                end_location=str(data['end_location']),
-                start_time=datetime.now(),
-                distance=distance_value,
-                safety_score=analysis.get('safety_score', 0),
-                status='active'
-            )
-            
-            db.session.add(new_route)
-            db.session.commit()
-            logger.info(f"[RequestID: {request_id}] Successfully saved route {new_route.id} to database")
-
-        except Exception as e:
-            logger.error(f"[RequestID: {request_id}] Database error: {str(e)}\n{traceback.format_exc()}")
-            db.session.rollback()
-            return jsonify({
-                'status': 'error',
-                'error': 'Database error'
-            }), 500
-
-        # Return successful response
-        response_data = {
+        analysis = gemini_service.analyze_route(data)
+        
+        return jsonify({
             'status': 'success',
             'data': {
-                'route_id': new_route.id,
-                'analysis': analysis,
-                'distance': distance_value
+                'route_id': str(uuid.uuid4()),  # Generate a unique ID
+                'analysis': {
+                    'safety_score': analysis.get('safety_score', 70),
+                    'risk_level': analysis.get('risk_level', 'medium'),
+                    'primary_concerns': analysis.get('primary_concerns', []),
+                    'recommendations': analysis.get('recommendations', []),
+                    'safe_spots': analysis.get('safe_spots', []),
+                    'emergency_resources': analysis.get('emergency_resources', []),
+                    'safer_alternatives': analysis.get('safer_alternatives', []),
+                    'confidence_score': analysis.get('confidence_score', 0.8)
+                }
             }
-        }
-        logger.info(f"[RequestID: {request_id}] Returning successful response with route_id: {new_route.id}")
-        logger.debug(f"[RequestID: {request_id}] Final response data: {response_data}")
-        return jsonify(response_data)
-
+        })
     except Exception as e:
-        logger.error(f"[RequestID: {request_id}] Unexpected error: {str(e)}\n{traceback.format_exc()}")
         return jsonify({
             'status': 'error',
             'error': str(e)

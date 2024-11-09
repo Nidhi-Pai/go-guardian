@@ -33,9 +33,12 @@ interface Location {
 interface SafetyAnalysis {
   safety_score: number;
   risk_level: string;
-  risks: string[];
+  primary_concerns: string[];
   recommendations: string[];
-  safe_spaces: string[];
+  safe_spots: string[];
+  emergency_resources: string[];
+  safer_alternatives?: string[];
+  confidence_score: number;
 }
 
 interface RouteInfo {
@@ -117,21 +120,38 @@ export default function SafeRoutePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          start_location: start,
-          end_location: end,
+          start_location: {
+            lat: start.lat,
+            lng: start.lng,
+            address: start.address
+          },
+          end_location: {
+            lat: end.lat,
+            lng: end.lng,
+            address: end.address
+          },
           distance: routeDetails.distance,
+          duration: routeDetails.duration,
           time_of_day: getTimeOfDay(),
-          weather: "Clear" // TODO: Integrate with weather API
+          steps: routeDetails.steps.map(step => ({
+            instructions: step.instructions,
+            distance: step.distance?.text,
+            duration: step.duration?.text,
+          }))
         }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to analyze route safety');
       }
-  
-      const data: RouteResponse = await response.json();
+
+      const data = await response.json();
       if (data.status === 'success' && data.data?.analysis) {
-        return data.data.analysis;
+        return {
+          ...data.data.analysis,
+          risks: data.data.analysis.primary_concerns || [],
+          safe_spaces: data.data.analysis.safe_spots || []
+        };
       }
       throw new Error(data.error || 'Failed to analyze route');
     } catch (err) {
@@ -179,22 +199,35 @@ export default function SafeRoutePage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          start_location: currentLocation,
-          end_location: location,
+          start_location: {
+            lat: currentLocation.lat,
+            lng: currentLocation.lng,
+            address: currentLocation.address
+          },
+          end_location: {
+            lat: location.lat,
+            lng: location.lng,
+            address: location.address
+          },
           distance: routeDetails.distance,
-          time_of_day: getTimeOfDay()
+          duration: routeDetails.duration,
+          time_of_day: new Date().toLocaleTimeString()
         }),
       });
 
-      if (!safetyResponse.ok) {
-        const errorText = await safetyResponse.text();
-        throw new Error(`Server error: ${safetyResponse.status} - ${errorText}`);
-      }
+      const responseData = await safetyResponse.json();
 
-      const responseData: RouteResponse = await safetyResponse.json();
-      
-      if (responseData.status === 'success' && responseData.data) {
-        setSafetyAnalysis(responseData.data.analysis);
+      if (responseData.status === 'success' && responseData.data?.analysis) {
+        setSafetyAnalysis({
+          safety_score: responseData.data.analysis.safety_score,
+          risk_level: responseData.data.analysis.risk_level,
+          primary_concerns: responseData.data.analysis.primary_concerns || [],
+          recommendations: responseData.data.analysis.recommendations || [],
+          safe_spots: responseData.data.analysis.safe_spots || [],
+          emergency_resources: responseData.data.analysis.emergency_resources || [],
+          safer_alternatives: responseData.data.analysis.safer_alternatives,
+          confidence_score: responseData.data.analysis.confidence_score
+        });
         setActiveRouteId(responseData.data.route_id);
       } else {
         throw new Error(responseData.error || 'Failed to analyze route');
