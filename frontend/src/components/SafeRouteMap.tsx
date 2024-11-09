@@ -42,6 +42,9 @@ const mapStyles = [
   }
 ];
 
+// Add this constant outside the component
+const libraries: ("places" | "geometry" | "drawing")[] = ["places", "geometry"];
+
 export function SafeRouteMap({ 
   apiKey, 
   initialLocation, 
@@ -55,7 +58,7 @@ export function SafeRouteMap({
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || '',
-    libraries: ["places"],
+    libraries // Use the static libraries array
   });
 
   const onMapLoad = React.useCallback((map: google.maps.Map) => {

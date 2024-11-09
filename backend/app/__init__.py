@@ -20,16 +20,18 @@ def create_app():
         print(f"Configuration error: {e}")
         
     
-    # Enable CORS - Updated configuration
+    # Configure CORS
     CORS(app, 
          resources={
              r"/api/*": {
                  "origins": ["http://localhost:3000"],
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                  "allow_headers": ["Content-Type", "Authorization"],
-                 "supports_credentials": True
+                 "supports_credentials": True,
+                 "expose_headers": ["Content-Type", "Authorization"]
              }
-         })
+         },
+         allow_credentials=True)
     
     # Configure SQLAlchemy
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///go_guardian.db'
@@ -64,16 +66,6 @@ def create_app():
         db.create_all()
         app.logger.info("Database initialized")
         
-    return app
-
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
-    
     # Create database tables
     with app.app_context():
         try:

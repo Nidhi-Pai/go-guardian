@@ -16,9 +16,9 @@ interface Location {
 interface SafetyContext {
   safety_score: number;
   risk_level: string;
-  risks: string[];
+  primary_concerns: string[];
   recommendations: string[];
-  safe_spaces: string[];
+  safe_spots: string[];
 }
 
 interface ContextualSafetyProps {
@@ -89,7 +89,13 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
 
         if (responseData.status === 'success' && responseData.data) {
           logger.info('Setting safety context:', responseData.data);
-          setContext(responseData.data);
+          const safetyData = {
+            ...responseData.data,
+            primary_concerns: responseData.data.primary_concerns || [],
+            recommendations: responseData.data.recommendations || [],
+            safe_spots: responseData.data.safe_spots || []
+          };
+          setContext(safetyData);
         } else if (responseData.status === 'error') {
           throw new Error(responseData.error);
         } else {
@@ -158,11 +164,11 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
             </div>
           </div>
 
-          {context.risks.length > 0 && (
+          {context.primary_concerns.length > 0 && (
             <div>
               <h4 className="font-medium mb-2">Potential Risks:</h4>
               <ul className="list-disc pl-5 space-y-1">
-                {context.risks.map((risk, index) => (
+                {context.primary_concerns.map((risk, index) => (
                   <li key={index} className="text-sm">{risk}</li>
                 ))}
               </ul>

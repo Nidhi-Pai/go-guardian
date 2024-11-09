@@ -14,6 +14,7 @@ export class AIService {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           start_location: route.legs[0].start_location.toJSON(),
           end_location: route.legs[0].end_location.toJSON(),

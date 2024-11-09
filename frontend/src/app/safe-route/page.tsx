@@ -198,6 +198,7 @@ export default function SafeRoutePage() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: 'include',
         body: JSON.stringify({
           start_location: {
             lat: currentLocation.lat,

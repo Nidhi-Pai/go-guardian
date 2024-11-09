@@ -1,7 +1,6 @@
 # backend/app/routes/safety_routes.py
 
 from flask import Blueprint, request, jsonify, current_app
-from flask_cors import cross_origin
 from ..services.gemini_service import GeminiService
 from ..models import db, Alert, Route  # Add Route import here
 from datetime import datetime
@@ -55,9 +54,12 @@ def prepare_route_data(data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error preparing route data: {str(e)}")
         raise
 
-@safety_bp.route('/analyze-route', methods=['POST'])
-@cross_origin()
+@safety_bp.route('/analyze-route', methods=['POST', 'OPTIONS'])
 def analyze_route():
+    # If it's a preflight request, return immediately
+    if request.method == 'OPTIONS':
+        return '', 204
+        
     try:
         data = request.get_json()
         
@@ -92,7 +94,6 @@ def analyze_route():
         }), 500
 
 @safety_bp.route('/active-route/<int:route_id>', methods=['GET', 'PUT', 'OPTIONS'])
-@cross_origin()
 def active_route(route_id):
     """Get or update active route information."""
     request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
@@ -147,7 +148,6 @@ def active_route(route_id):
         }), 500
 
 @safety_bp.route('/analyze-area', methods=['POST', 'OPTIONS'])
-@cross_origin()
 def analyze_area():
     """Analyze safety of a specific area."""
     request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
@@ -186,7 +186,6 @@ def analyze_area():
         }), 500
 
 @safety_bp.route('/route-history', methods=['GET', 'OPTIONS'])
-@cross_origin()
 def route_history():
     """Get route history."""
     request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
