@@ -65,6 +65,12 @@ export default function HomePage() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const locationOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000,
+    maximumAge: 0
+  };
+
   useEffect(() => {
     if ("geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
@@ -78,14 +84,11 @@ export default function HomePage() {
           setIsLoading(false);
         },
         (error) => {
+          console.error('Geolocation error:', error);
           setLocationError("Unable to get your location. Please enable location services.");
           setIsLoading(false);
         },
-        { 
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
+        locationOptions
       );
 
       return () => navigator.geolocation.clearWatch(watchId);

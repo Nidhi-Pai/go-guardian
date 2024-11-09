@@ -11,14 +11,10 @@ class GeminiServiceError(Exception):
     pass
 
 class GeminiService:
-    def __init__(self):
-        api_key = os.getenv('GEMINI_API_KEY')
+    def __init__(self, api_key: str):
         if not api_key:
-            raise GeminiServiceError("GEMINI_API_KEY not found in environment variables")
-            
+            raise ValueError("Gemini API key is required")
         genai.configure(api_key=api_key)
-        
-        # Initialize models
         self.text_model = genai.GenerativeModel('gemini-pro')
         self.vision_model = genai.GenerativeModel('gemini-pro-vision')
         

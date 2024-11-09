@@ -10,7 +10,14 @@ import logging
 
 class RouteService:
     def __init__(self, gmaps_key: str, gemini_key: str):
-        self.gmaps = googlemaps.Client(key=gmaps_key)
+        self.gmaps = googlemaps.Client(
+            key=gmaps_key,
+            requests_kwargs={
+                'headers': {
+                    'Referer': 'http://localhost:3000'
+                }
+            }
+        )
         self.safety_analyzer = SafetyAnalyzer(gemini_key)
         self.logger = logging.getLogger(__name__)
 

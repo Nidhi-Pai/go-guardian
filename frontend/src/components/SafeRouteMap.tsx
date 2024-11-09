@@ -17,6 +17,7 @@ interface SafeRouteMapProps {
   initialLocation: Location;
   destination: Location | null;
   onRouteCalculated?: (route: google.maps.DirectionsResult) => void;
+  onError?: (error: string) => void;
 }
 
 const mapContainerStyle = {
@@ -49,7 +50,8 @@ export function SafeRouteMap({
   apiKey, 
   initialLocation, 
   destination, 
-  onRouteCalculated 
+  onRouteCalculated, 
+  onError 
 }: SafeRouteMapProps) {
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
   const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
@@ -58,7 +60,7 @@ export function SafeRouteMap({
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || '',
-    libraries // Use the static libraries array
+    libraries: libraries
   });
 
   const onMapLoad = React.useCallback((map: google.maps.Map) => {

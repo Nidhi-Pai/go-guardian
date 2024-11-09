@@ -16,19 +16,27 @@ def create_app():
     try:
         Config.validate()
         app.config.from_object(Config)
+        
+        # Get Gemini API key from environment
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+            
+        # Initialize Gemini service with API key
+        app.gemini_service = GeminiService(api_key=gemini_api_key)
+        
     except ValueError as e:
         print(f"Configuration error: {e}")
-        
+        raise
     
     # Configure CORS
     CORS(app, 
          resources={
              r"/api/*": {
                  "origins": ["http://localhost:3000"],
-                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                 "methods": ["GET", "POST", "OPTIONS"],
                  "allow_headers": ["Content-Type", "Authorization"],
-                 "supports_credentials": True,
-                 "expose_headers": ["Content-Type", "Authorization"]
+                 "supports_credentials": True
              }
          },
          allow_credentials=True)
@@ -41,14 +49,27 @@ def create_app():
     # Initialize database
     db.init_app(app)
 
-    # Initialize Gemini Service
     try:
-        app.gemini_service = GeminiService()
-        print("Gemini Service initialized successfully")
-    except GeminiServiceError as e:
-        print(f"Error initializing Gemini service: {e}")
-        app.gemini_service = None
-    
+        Config.validate()
+        app.config.from_object(Config)
+        
+        # Initialize Gemini service
+        gemini_api_key = os.getenv('GEMINI_API_KEY')
+        if not gemini_api_key:
+            raise ValueError("GEMINI_API_KEY environment variable is required")
+            
+        app.gemini_service = GeminiService(api_key=gemini_api_key)
+        
+        # Register blueprints
+        from .routes.safety_routes import safety_bp
+        app.register_blueprint(safety_bp, url_prefix='/api/safety')
+        
+        return app
+        
+    except Exception as e:
+        print(f"Application initialization error: {e}")
+        raise
+
     # Debug route
     @app.route('/debug/routes')
     def list_routes():
@@ -86,6 +107,9 @@ def create_app():
         except Exception as e:
             print(f"Error initializing database: {str(e)}")
     
+     # Initialize Gemini service with API key
+    app.gemini_service = GeminiService(api_key=gemini_api_key)
+
     # Register blueprints
     from .routes.safety_routes import safety_bp
     from .routes.emergency_routes import emergency_bp

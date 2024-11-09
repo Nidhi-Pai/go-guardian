@@ -34,6 +34,24 @@ const logger = {
   }
 };
 
+const getFallbackAnalysis = () => ({
+  safety_score: 70,
+  risk_level: 'medium',
+  primary_concerns: [
+    'Unable to fetch real-time safety data',
+    'Using fallback safety assessment'
+  ],
+  recommendations: [
+    'Stay aware of your surroundings',
+    'Keep to well-lit areas',
+    'Have emergency contacts ready'
+  ],
+  safe_spots: [
+    'Nearby businesses during operating hours',
+    'Public spaces with good visibility'
+  ]
+});
+
 export function ContextualSafety({ location }: ContextualSafetyProps) {
   const [context, setContext] = useState<SafetyContext | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,72 +64,55 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
       setLoading(true);
       setError(null);
       
-      logger.info('Fetching safety analysis for location:', {
-        lat: location.lat,
-        lng: location.lng
-      });
-      
-      console.log('Sending request:', {
-        url: `${API_BASE_URL}/api/safety/analyze-area`,
-        body: {
-          location: {
-            lat: location.lat,
-            lng: location.lng,
-            address: location.address
-          }
-        }
-      });
-      
       try {
         const response = await fetch(`${API_BASE_URL}/api/safety/analyze-area`, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
+            'Referer': window.location.origin,
+            'Origin': window.location.origin
           },
+          mode: 'cors',
+          credentials: 'include',
           body: JSON.stringify({
             location: {
               lat: location.lat,
               lng: location.lng,
-              address: location.address
+              address: location.address || ''
             }
           })
         });
 
-        console.log('Response status:', response.status);
-        const responseData = await response.json();
-        console.log('Received response:', responseData);
-
         if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Server error: ${response.status} - ${errorText}`);
+          console.warn('Using fallback analysis due to API error');
+          setContext(getFallbackAnalysis());
+          return;
         }
 
+        const responseData = await response.json();
+        
         if (responseData.status === 'success' && responseData.data) {
-          logger.info('Setting safety context:', responseData.data);
-          const safetyData = {
-            ...responseData.data,
+          setContext({
+            safety_score: responseData.data.safety_score || 0,
+            risk_level: responseData.data.risk_level || 'unknown',
             primary_concerns: responseData.data.primary_concerns || [],
             recommendations: responseData.data.recommendations || [],
             safe_spots: responseData.data.safe_spots || []
-          };
-          setContext(safetyData);
-        } else if (responseData.status === 'error') {
-          throw new Error(responseData.error);
+          });
         } else {
-          throw new Error('Invalid response format from server');
+          setContext(getFallbackAnalysis());
         }
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch safety context';
-        logger.error('Failed to fetch safety context:', err);
-        setError(errorMessage);
-        setContext(null);
+      } catch (error) {
+        console.warn('Using fallback analysis due to error:', error);
+        setContext(getFallbackAnalysis());
       } finally {
         setLoading(false);
       }
     };
 
-    fetchContextData();
+    const timeoutId = setTimeout(fetchContextData, 500);
+    return () => clearTimeout(timeoutId);
   }, [location]);
 
   if (loading) {

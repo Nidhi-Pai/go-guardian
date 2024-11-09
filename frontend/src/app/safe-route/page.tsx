@@ -20,6 +20,8 @@ import { SafetyAnalysisPanel } from "@/components/SafetyAnalysisPanel";
 import { ContextualSafety } from "@/components/ContextualSafety";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
 import type { SafetyAlert } from "@/types";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Update API base URL to match your Flask backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -68,42 +70,41 @@ export default function SafeRoutePage() {
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeRouteId, setActiveRouteId] = useState<number | null>(null);
+  const [locationStatus, setLocationStatus] = useState<'loading' | 'denied' | 'error' | 'success'>('loading');
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
+
+  const locationOptions = {
+    enableHighAccuracy: true,
+    timeout: 20000, // Increase timeout to 20 seconds
+    maximumAge: 0
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setIsInitializing(false);
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          const location = {
+        (position) => {
+          setCurrentLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-          };
-          
-          try {
-            // Use Google Maps Geocoding service directly instead of API call
-            const geocoder = new google.maps.Geocoder();
-            const result = await geocoder.geocode({ location });
-            
-            if (result.results?.[0]) {
-              setCurrentLocation({
-                ...location,
-                address: result.results[0].formatted_address,
-              });
-            } else {
-              setCurrentLocation(location);
-            }
-          } catch (err) {
-            console.error('Error getting address:', err);
-            setCurrentLocation(location);
-          }
+          });
+          setLocationStatus('success');
         },
         (error) => {
+          console.error('Geolocation error:', error);
+          setLocationStatus('denied');
           setError("Please enable location services to use route planning.");
         },
-        { 
-          enableHighAccuracy: true,
-          timeout: 5000,
-          maximumAge: 0
-        }
+        locationOptions
       );
     }
   }, []);
@@ -164,80 +165,32 @@ export default function SafeRoutePage() {
     if (!currentLocation) return;
 
     setLoading(true);
-    setIsAnalyzing(true);
     setError(null);
+    setDestination(location);
     
+    // Don't set analyzing state until we have route info
     try {
-      // Keep the destination state update after route calculation
-      const directionsService = new google.maps.DirectionsService();
-      const routeResult = await directionsService.route({
-        origin: { lat: currentLocation.lat, lng: currentLocation.lng },
-        destination: { lat: location.lat, lng: location.lng },
-        travelMode: google.maps.TravelMode.WALKING,
-      });
-
-      if (!routeResult.routes?.[0]?.legs?.[0]) {
-        throw new Error("Could not calculate route");
+      // Wait for a short delay to allow Google Maps to initialize
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      if (!routeInfo) {
+        setLoading(false);
+        return;
       }
 
-      const leg = routeResult.routes[0].legs[0];
-      const routeDetails = {
-        distance: leg.distance?.text || "",
-        duration: leg.duration?.text || "",
-        steps: leg.steps || [],
-      };
+      setIsAnalyzing(true);
+      const analysis = await analyzeSafetyForRoute(
+        currentLocation,
+        location,
+        routeInfo
+      );
       
-      // Set route info before making the safety analysis request
-      setRouteInfo(routeDetails);
-      
-      // Now set destination after successful route calculation
-      setDestination(location);
-
-      const safetyResponse = await fetch(`${API_BASE_URL}/api/safety/analyze-route`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          start_location: {
-            lat: currentLocation.lat,
-            lng: currentLocation.lng,
-            address: currentLocation.address
-          },
-          end_location: {
-            lat: location.lat,
-            lng: location.lng,
-            address: location.address
-          },
-          distance: routeDetails.distance,
-          duration: routeDetails.duration,
-          time_of_day: new Date().toLocaleTimeString()
-        }),
-      });
-
-      const responseData = await safetyResponse.json();
-
-      if (responseData.status === 'success' && responseData.data?.analysis) {
-        setSafetyAnalysis({
-          safety_score: responseData.data.analysis.safety_score,
-          risk_level: responseData.data.analysis.risk_level,
-          primary_concerns: responseData.data.analysis.primary_concerns || [],
-          recommendations: responseData.data.analysis.recommendations || [],
-          safe_spots: responseData.data.analysis.safe_spots || [],
-          emergency_resources: responseData.data.analysis.emergency_resources || [],
-          safer_alternatives: responseData.data.analysis.safer_alternatives,
-          confidence_score: responseData.data.analysis.confidence_score
-        });
-        setActiveRouteId(responseData.data.route_id);
-      } else {
-        throw new Error(responseData.error || 'Failed to analyze route');
+      if (analysis) {
+        setSafetyAnalysis(analysis);
       }
-
     } catch (err) {
       console.error('🔴 Route analysis error:', err);
-      setError(err instanceof Error ? err.message : "Failed to plan route");
-      // Don't reset destination and safety analysis on error
+      setError(err instanceof Error ? err.message : "Failed to analyze route");
     } finally {
       setLoading(false);
       setIsAnalyzing(false);
@@ -245,21 +198,59 @@ export default function SafeRoutePage() {
   };
 
   const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
-    if (!route.routes?.[0]?.legs?.[0]) return;
+    if (!route.routes?.[0]?.legs?.[0]) {
+      setError("Could not calculate route");
+      return;
+    }
     
     const leg = route.routes[0].legs[0];
-    const routeInfo = {
+    const newRouteInfo = {
       distance: leg.distance?.text || "",
       duration: leg.duration?.text || "",
       steps: leg.steps || [],
     };
     
-    setRouteInfo(routeInfo);
+    // Only update if route info has changed
+    if (JSON.stringify(newRouteInfo) !== JSON.stringify(routeInfo)) {
+      setRouteInfo(newRouteInfo);
+      
+      // Only trigger safety analysis if we have a destination
+      if (destination && !isAnalyzing) {
+        const analysis = await analyzeSafetyForRoute(
+          currentLocation!,
+          destination,
+          newRouteInfo
+        );
+        if (analysis) {
+          setSafetyAnalysis(analysis);
+        }
+      }
+    }
   };
 
   const getTimeOfDay = () => {
     const hour = new Date().getHours();
     return hour >= 6 && hour < 18 ? "day" : "night";
+  };
+
+  const requestLocationPermission = async () => {
+    try {
+      const result = await navigator.permissions.query({ name: 'geolocation' });
+      if (result.state === 'prompt') {
+        // This will trigger the permission prompt
+        navigator.geolocation.getCurrentPosition(() => {}, () => {});
+      }
+    } catch (error) {
+      console.error('Permission check failed:', error);
+    }
+  };
+
+  const retryLocationRequest = () => {
+    if (retryCount < maxRetries) {
+      setRetryCount(prev => prev + 1);
+      setLocationStatus('loading');
+      requestLocationPermission();
+    }
   };
 
   if (!GOOGLE_MAPS_API_KEY) {
@@ -270,6 +261,17 @@ export default function SafeRoutePage() {
           Google Maps API key is required. Please add it to your environment variables.
         </AlertDescription>
       </Alert>
+    );
+  }
+
+  if (isInitializing) {
+    return (
+      <div className="flex items-center justify-center h-[400px]">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm text-muted-foreground">Initializing location services...</p>
+        </div>
+      </div>
     );
   }
 
@@ -312,9 +314,24 @@ export default function SafeRoutePage() {
             loading={loading}
             disabled={!currentLocation}
           />
-          {!currentLocation && (
+          {locationStatus === 'denied' && (
             <p className="text-sm text-muted-foreground mt-2">
-              Please enable location services to use route planning
+              Please enable location access in your browser settings to use route planning
+            </p>
+          )}
+          {locationStatus === 'error' && (
+            <Button 
+              onClick={retryLocationRequest}
+              variant="outline"
+              size="sm"
+              className="mt-2"
+            >
+              Retry Location Request
+            </Button>
+          )}
+          {locationStatus === 'loading' && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Getting your location...
             </p>
           )}
           {currentLocation?.address && (

@@ -22,14 +22,14 @@ class SafetyAnalyzer:
             'transit': 'https://data.sfgov.org/resource/rfx5-sfvq.json',  # Transit Stops
         }
 
-    async def analyze_route(self, start: Dict[str, float], end: Dict[str, float]) -> Dict[str, Any]:
-        """Analyze safety of a route between two points"""
+    async def analyze_area(self, location: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze safety of a specific area"""
         try:
-            # Collect data along the route
-            route_data = await self._collect_route_data(start, end)
+            # Collect data for the area
+            area_data = await self._collect_area_data(location)
             
             # Generate safety analysis prompt
-            prompt = self._create_safety_prompt(route_data)
+            prompt = self._create_area_safety_prompt(area_data)
             
             # Get Gemini's analysis
             response = self.model.generate_content(prompt)
@@ -37,18 +37,18 @@ class SafetyAnalyzer:
             return self._process_gemini_response(response.text)
             
         except Exception as e:
-            self.logger.error(f"Route analysis error: {str(e)}")
+            self.logger.error(f"Area analysis error: {str(e)}")
             return self._get_fallback_analysis()
 
-    async def _collect_route_data(self, start: Dict[str, float], end: Dict[str, float]) -> Dict[str, Any]:
-        """Collect safety-related data along the route"""
+    async def _collect_area_data(self, location: Dict[str, Any]) -> Dict[str, Any]:
+        """Collect safety-related data for the area"""
         current_time = datetime.now()
         
         # Calculate bounding box for data collection
-        min_lat = min(start['lat'], end['lat']) - 0.01
-        max_lat = max(start['lat'], end['lat']) + 0.01
-        min_lng = min(start['lng'], end['lng']) - 0.01
-        max_lng = max(start['lng'], end['lng']) + 0.01
+        min_lat = min(location['lat'], location['lat']) - 0.01
+        max_lat = max(location['lat'], location['lat']) + 0.01
+        min_lng = min(location['lng'], location['lng']) - 0.01
+        max_lng = max(location['lng'], location['lng']) + 0.01
         
         # Fetch recent incidents
         incidents = requests.get(
@@ -134,10 +134,10 @@ class SafetyAnalyzer:
             'density': len(safe_spaces) / ((df['latitude'].max() - df['latitude'].min()) * 111)
         }
 
-    def _create_safety_prompt(self, data: Dict[str, Any]) -> str:
+    def _create_area_safety_prompt(self, data: Dict[str, Any]) -> str:
         """Create prompt for Gemini analysis"""
         return f"""
-        Analyze the safety of this route in San Francisco.
+        Analyze the safety of this area in San Francisco.
         
         Current Conditions:
         - Time: {data['time_info']['current_time']}
@@ -152,7 +152,7 @@ class SafetyAnalyzer:
         1. Overall safety score (0-100)
         2. Specific risks and their locations
         3. Recommended precautions
-        4. Safe spaces along the route
+        4. Safe spaces in the area
         5. Emergency resources
         
         Format the response as JSON with these exact keys:
