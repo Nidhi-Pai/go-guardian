@@ -14,9 +14,9 @@ class GeminiService:
     def __init__(self, api_key: str):
         if not api_key:
             raise ValueError("Gemini API key is required")
+        
+        # Configure with just the API key
         genai.configure(api_key=api_key)
-        self.text_model = genai.GenerativeModel('gemini-pro')
-        self.vision_model = genai.GenerativeModel('gemini-pro-vision')
         
         # Configure generation parameters
         self.generation_config = {
@@ -25,6 +25,17 @@ class GeminiService:
             "top_k": 40,
             "max_output_tokens": 2048,
         }
+        
+        # Create models with the configuration
+        self.text_model = genai.GenerativeModel(
+            model_name='gemini-pro',
+            generation_config=self.generation_config
+        )
+        
+        self.vision_model = genai.GenerativeModel(
+            model_name='gemini-pro-vision',
+            generation_config=self.generation_config
+        )
 
     def analyze_route(self, route_data: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze route safety using Gemini Pro."""
@@ -66,7 +77,13 @@ class GeminiService:
             """
             response = self.text_model.generate_content(
                 prompt,
-                generation_config=self.generation_config
+                generation_config=self.generation_config,
+                safety_settings=[],
+                request_options={
+                    "headers": {
+                        "Referer": "http://localhost:8000"
+                    }
+                }
             )
             
             if not response or not response.text:

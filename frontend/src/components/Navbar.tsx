@@ -13,12 +13,16 @@ import {
   Phone,
   Shield,
   Menu,
+  Users,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
   { title: "Home", path: "/", icon: Home },
   { title: "Safe Route", path: "/safe-route", icon: MapPin },
+  { title: "Community", path: "/community", icon: Users },
   { title: "Profile", path: "/profile", icon: User },
+  { title: "Settings", path: "/settings", icon: Settings },
   { title: "Emergency Contacts", path: "/emergency-contacts", icon: Phone },
 ];
 
