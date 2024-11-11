@@ -116,7 +116,7 @@ export default function HomePage() {
 
   const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
     try {
-      const monitoringData = await aiService.startRouteMonitoring(route);
+      const monitoringData = await aiService.startRouteMonitoring(route.routes[0]);
       console.log("Route monitoring started:", monitoringData);
     } catch (error) {
       console.error("Failed to start route monitoring:", error);

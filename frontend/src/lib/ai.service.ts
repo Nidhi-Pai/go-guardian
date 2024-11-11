@@ -1,5 +1,16 @@
 import type { AIAnalysisResult, Location, SafetyAnalysis } from "@/types";
 
+export interface MonitoringStatus {
+  routeId: string;
+  status: 'active' | 'paused' | 'completed';
+  lastUpdate: Date;
+  checkpoints: Array<{
+    location: Location;
+    timestamp: Date;
+    status: 'pending' | 'reached' | 'missed';
+  }>;
+}
+
 export class AIService {
   private readonly apiUrl: string;
   private readonly referrer: string;
@@ -100,25 +111,53 @@ export class AIService {
     }
   }
 
-  async startRouteMonitoring(route: google.maps.DirectionsResult): Promise<any> {
-    const response = await fetch(`${this.apiUrl}/route/monitor`, {
+  async startRouteMonitoring(route: google.maps.DirectionsRoute): Promise<MonitoringStatus> {
+    try {
+      const response = await fetch(`${this.apiUrl}/monitoring/start`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Referer': this.referrer
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          route: {
+            start_location: this.convertToLocation(route.legs[0].start_location),
+            end_location: this.convertToLocation(route.legs[0].end_location),
+            waypoints: route.legs[0].steps.map(step => ({
+              location: this.convertToLocation(step.end_location),
+              arrival_time: new Date(Date.now() + (step.duration?.value || 0) * 1000)
+            }))
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to start route monitoring');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error starting route monitoring:', error);
+      throw error;
+    }
+  }
+
+  async stopRouteMonitoring(routeId: string): Promise<void> {
+    const response = await fetch(`${this.apiUrl}/monitoring/stop/${routeId}`, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
         'Referer': this.referrer
       },
-      credentials: 'include',
-      body: JSON.stringify({ route }),
+      credentials: 'include'
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to start route monitoring');
+      throw new Error('Failed to stop route monitoring');
     }
-
-    const data = await response.json();
-    return data.data;
   }
 
   private convertToLocation(googleLocation: google.maps.LatLng): Location {
