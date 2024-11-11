@@ -179,28 +179,21 @@ export class AIService {
     }
   }
 
-  async processVoiceCommand(command: string, location: Location): Promise<VoiceCommandResult> {
-    try {
-      const response = await fetch(`${this.apiUrl}/voice/process`, {
-        method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'Referer': this.referrer
-        },
-        credentials: 'include',
-        body: JSON.stringify({ command, location })
-      });
+  async processVoiceCommand(transcript: string, context: any) {
+    const response = await fetch('/api/voice-command', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ transcript, context }),
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to process voice command');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error processing voice command:', error);
-      throw error;
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Server error: ${response.status} ${response.statusText} - ${errorText}`);
     }
+
+    return response.json();
   }
 
   async searchSafePlaces(

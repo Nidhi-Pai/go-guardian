@@ -228,17 +228,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
           )}
-        <div className="container mx-auto p-4">
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold">Safety Guardian</h1>
-                <VoiceCommand />
-              </div>
-              
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">Find Safe Places</h2>
-                <SafePlacesSearch />
-              </div>
-            </div>       
+             
           {currentLocation && (
             <EmergencyAlert
               currentLocation={currentLocation}

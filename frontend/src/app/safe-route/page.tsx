@@ -22,6 +22,8 @@ import { EmergencyAlert } from "@/components/EmergencyAlert";
 import type { SafetyAlert } from "@/types";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VoiceCommand } from "@/components/VoiceCommand";
+import { SafePlacesSearch } from "@/components/SafePlacesSearch";
 
 // Update API base URL to match your Flask backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -365,17 +367,21 @@ export default function SafeRoutePage() {
             Find the safest path to your destination
           </p>
         </div>
-        <Badge 
-          variant={getTimeOfDay() === "day" ? "default" : "secondary"}
-          className="px-4 py-1 text-sm"
-        >
-          {getTimeOfDay() === "day" ? (
-            <Sun className="h-4 w-4 mr-2" />
-          ) : (
-            <Moon className="h-4 w-4 mr-2" />
-          )}
-          {getTimeOfDay() === "day" ? "Daytime Route" : "Nighttime Route"}
-        </Badge>
+
+        <div className="flex items-center gap-4">
+          <VoiceCommand />
+          <Badge 
+            variant={getTimeOfDay() === "day" ? "default" : "secondary"}
+            className="px-4 py-1 text-sm"
+          >
+            {getTimeOfDay() === "day" ? (
+              <Sun className="h-4 w-4 mr-2" />
+            ) : (
+              <Moon className="h-4 w-4 mr-2" />
+            )}
+            {getTimeOfDay() === "day" ? "Daytime Route" : "Nighttime Route"}
+          </Badge>
+        </div>
       </div>
 
       {/* Error Display */}
