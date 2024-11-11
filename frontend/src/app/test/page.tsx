@@ -11,7 +11,7 @@ import {
   Users,
   Settings,
   AlertTriangle,
-  Loader2
+  Loader2,
 } from "lucide-react";
 import { SafeRouteMap } from "@/components/SafeRouteMap";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
@@ -70,13 +70,15 @@ export default function HomePage() {
 
       try {
         if ("geolocation" in navigator) {
-          const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 5000,
-              maximumAge: 0
-            });
-          });
+          const position = await new Promise<GeolocationPosition>(
+            (resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 5000,
+                maximumAge: 0,
+              });
+            },
+          );
 
           setCurrentLocation({
             lat: position.coords.latitude,
@@ -88,9 +90,9 @@ export default function HomePage() {
         }
       } catch (error) {
         setLocationError(
-          error instanceof Error 
-            ? error.message 
-            : "Unable to get your location. Please enable location services."
+          error instanceof Error
+            ? error.message
+            : "Unable to get your location. Please enable location services.",
         );
       } finally {
         setIsLoadingLocation(false);
@@ -117,7 +119,8 @@ export default function HomePage() {
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            Google Maps API key is not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
+            Google Maps API key is not configured. Please add
+            NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
           </AlertDescription>
         </Alert>
       );
@@ -128,7 +131,9 @@ export default function HomePage() {
         <div className="h-[400px] flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Getting your location...</p>
+            <p className="text-sm text-muted-foreground">
+              Getting your location...
+            </p>
           </div>
         </div>
       );
@@ -165,7 +170,9 @@ export default function HomePage() {
   return (
     <div className="container max-w-7xl mx-auto p-6 space-y-8">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Welcome to Go Guardian</h1>
+        <h1 className="text-4xl font-bold tracking-tight">
+          Welcome to Go Guardian
+        </h1>
         <p className="text-muted-foreground">
           Your AI-powered safety companion
         </p>
@@ -175,7 +182,9 @@ export default function HomePage() {
         {quickActions.map((action) => (
           <Card key={action.href} className="hover:shadow-lg transition-all">
             <CardHeader>
-              <div className={`w-12 h-12 rounded-full ${action.color} flex items-center justify-center text-white mb-4`}>
+              <div
+                className={`w-12 h-12 rounded-full ${action.color} flex items-center justify-center text-white mb-4`}
+              >
                 <action.icon className="h-6 w-6" />
               </div>
               <CardTitle className="text-xl">{action.title}</CardTitle>
@@ -197,9 +206,7 @@ export default function HomePage() {
             <span>Current Location</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[400px]">
-          {renderMap()}
-        </CardContent>
+        <CardContent className="h-[400px]">{renderMap()}</CardContent>
       </Card>
 
       {currentLocation && (

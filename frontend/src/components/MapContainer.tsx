@@ -1,19 +1,19 @@
 "use client";
 
-import React from 'react';
-import { GoogleMap, Marker } from '@react-google-maps/api';
+import React from "react";
+import { GoogleMap, Marker } from "@react-google-maps/api";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { useMaps } from '@/contexts/MapsContext';
+import { useMaps } from "@/contexts/MapsContext";
 
 const containerStyle = {
-  width: '100%',
-  height: '400px'
+  width: "100%",
+  height: "400px",
 };
 
 const defaultCenter = {
   lat: 51.5074,
-  lng: -0.1278
+  lng: -0.1278,
 };
 
 export default function MapContainer() {
@@ -40,7 +40,7 @@ export default function MapContainer() {
           };
           setCenter(pos);
           map?.panTo(pos);
-          
+
           toast({
             title: "Location found",
             description: "Successfully got your current location",
@@ -52,7 +52,7 @@ export default function MapContainer() {
             description: "Error getting your location",
             variant: "destructive",
           });
-        }
+        },
       );
     } else {
       toast({
@@ -83,15 +83,11 @@ export default function MapContainer() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold">Location</h2>
-        <Button 
-          onClick={getCurrentLocation}
-          variant="outline"
-          size="sm"
-        >
+        <Button onClick={getCurrentLocation} variant="outline" size="sm">
           Get Current Location
         </Button>
       </div>
-      
+
       <div className="rounded-lg overflow-hidden border border-border">
         <GoogleMap
           mapContainerStyle={containerStyle}

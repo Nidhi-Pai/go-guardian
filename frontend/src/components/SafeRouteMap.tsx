@@ -2,11 +2,11 @@
 
 "use client";
 
-import React from 'react';
-import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import React from "react";
+import { GoogleMap, Marker, DirectionsRenderer } from "@react-google-maps/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { useMaps } from '@/contexts/MapsContext';
+import { useMaps } from "@/contexts/MapsContext";
 
 interface Location {
   lat: number;
@@ -21,38 +21,40 @@ interface SafeRouteMapProps {
 }
 
 const mapContainerStyle = {
-  width: '100%',
-  height: '100%'
+  width: "100%",
+  height: "100%",
 };
 
 const defaultCenter = {
   lat: 37.7749,
-  lng: -122.4194  // San Francisco coordinates
+  lng: -122.4194, // San Francisco coordinates
 };
 
 const mapStyles = [
   {
     featureType: "poi",
     elementType: "labels",
-    stylers: [{ visibility: "off" }]
+    stylers: [{ visibility: "off" }],
   },
   {
     featureType: "transit",
     elementType: "labels",
-    stylers: [{ visibility: "off" }]
-  }
+    stylers: [{ visibility: "off" }],
+  },
 ];
 
-export function SafeRouteMap({ 
-  initialLocation, 
-  fromLocation, 
-  toLocation, 
-  onRouteCalculated 
+export function SafeRouteMap({
+  initialLocation,
+  fromLocation,
+  toLocation,
+  onRouteCalculated,
 }: SafeRouteMapProps) {
   const { isLoaded, loadError } = useMaps();
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
-  const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
-  const [directionsRenderer, setDirectionsRenderer] = React.useState<google.maps.DirectionsRenderer | null>(null);
+  const [directionsService, setDirectionsService] =
+    React.useState<google.maps.DirectionsService | null>(null);
+  const [directionsRenderer, setDirectionsRenderer] =
+    React.useState<google.maps.DirectionsRenderer | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   const onMapLoad = React.useCallback((map: google.maps.Map) => {
@@ -64,8 +66,8 @@ export function SafeRouteMap({
       polylineOptions: {
         strokeColor: "#0066CC",
         strokeWeight: 5,
-        strokeOpacity: 0.8
-      }
+        strokeOpacity: 0.8,
+      },
     });
     setDirectionsService(directionsService);
     setDirectionsRenderer(directionsRenderer);
@@ -74,21 +76,31 @@ export function SafeRouteMap({
 
   React.useEffect(() => {
     if (toLocation && directionsService && directionsRenderer && map) {
-      directionsService.route({
-        origin: fromLocation,
-        destination: toLocation,
-        travelMode: google.maps.TravelMode.WALKING,
-        provideRouteAlternatives: true
-      }, (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK && result) {
-          directionsRenderer.setDirections(result);
-          onRouteCalculated?.(result);
-        } else {
-          setError('Failed to calculate route');
-        }
-      });
+      directionsService.route(
+        {
+          origin: fromLocation,
+          destination: toLocation,
+          travelMode: google.maps.TravelMode.WALKING,
+          provideRouteAlternatives: true,
+        },
+        (result, status) => {
+          if (status === google.maps.DirectionsStatus.OK && result) {
+            directionsRenderer.setDirections(result);
+            onRouteCalculated?.(result);
+          } else {
+            setError("Failed to calculate route");
+          }
+        },
+      );
     }
-  }, [fromLocation, toLocation, directionsService, directionsRenderer, map, onRouteCalculated]);
+  }, [
+    fromLocation,
+    toLocation,
+    directionsService,
+    directionsRenderer,
+    map,
+    onRouteCalculated,
+  ]);
 
   if (!isLoaded) {
     return (
@@ -118,7 +130,7 @@ export function SafeRouteMap({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       <GoogleMap
         mapContainerStyle={mapContainerStyle}
         zoom={14}

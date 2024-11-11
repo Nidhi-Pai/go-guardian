@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
-import { Badge } from './ui/badge';
-import { Clock, MapPin, Shield } from 'lucide-react';
-import { MonitoringStatus } from '@/lib/ai.service';
-import { aiService } from '@/lib/ai.service';
-import { toast } from '@/hooks/use-toast';
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "./ui/button";
+import { Progress } from "./ui/progress";
+import { Badge } from "./ui/badge";
+import { Clock, MapPin, Shield } from "lucide-react";
+import { MonitoringStatus } from "@/lib/ai.service";
+import { aiService } from "@/lib/ai.service";
+import { toast } from "@/hooks/use-toast";
 
 interface RouteMonitoringProps {
   route: google.maps.DirectionsRoute;
   onStatusUpdate?: (status: MonitoringStatus) => void;
 }
 
-export function RouteMonitoring({ route, onStatusUpdate }: RouteMonitoringProps) {
+export function RouteMonitoring({
+  route,
+  onStatusUpdate,
+}: RouteMonitoringProps) {
   const [monitoring, setMonitoring] = useState<MonitoringStatus | null>(null);
   const [isActive, setIsActive] = useState(false);
 
@@ -24,13 +27,13 @@ export function RouteMonitoring({ route, onStatusUpdate }: RouteMonitoringProps)
       interval = setInterval(async () => {
         try {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/monitoring/status/${monitoring.routeId}`
+            `${process.env.NEXT_PUBLIC_API_URL}/api/monitoring/status/${monitoring.routeId}`,
           );
           const data = await response.json();
           setMonitoring(data);
           onStatusUpdate?.(data);
         } catch (error) {
-          console.error('Error fetching monitoring status:', error);
+          console.error("Error fetching monitoring status:", error);
         }
       }, 10000); // Update every 10 seconds
     }
@@ -103,14 +106,25 @@ export function RouteMonitoring({ route, onStatusUpdate }: RouteMonitoringProps)
                 Stop Monitoring
               </Button>
             </div>
-            
+
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span>Progress</span>
-                <span>{monitoring.checkpoints.filter(c => c.status === 'reached').length} / {monitoring.checkpoints.length} checkpoints</span>
+                <span>
+                  {
+                    monitoring.checkpoints.filter((c) => c.status === "reached")
+                      .length
+                  }{" "}
+                  / {monitoring.checkpoints.length} checkpoints
+                </span>
               </div>
-              <Progress 
-                value={(monitoring.checkpoints.filter(c => c.status === 'reached').length / monitoring.checkpoints.length) * 100} 
+              <Progress
+                value={
+                  (monitoring.checkpoints.filter((c) => c.status === "reached")
+                    .length /
+                    monitoring.checkpoints.length) *
+                  100
+                }
               />
             </div>
 
@@ -119,10 +133,15 @@ export function RouteMonitoring({ route, onStatusUpdate }: RouteMonitoringProps)
                 <div key={index} className="flex items-center gap-2 text-sm">
                   <MapPin className="h-4 w-4" />
                   <span>Checkpoint {index + 1}</span>
-                  <Badge variant={
-                    checkpoint.status === 'reached' ? "default" :
-                    checkpoint.status === 'missed' ? "destructive" : "secondary"
-                  }>
+                  <Badge
+                    variant={
+                      checkpoint.status === "reached"
+                        ? "default"
+                        : checkpoint.status === "missed"
+                          ? "destructive"
+                          : "secondary"
+                    }
+                  >
                     {checkpoint.status}
                   </Badge>
                 </div>
@@ -130,10 +149,7 @@ export function RouteMonitoring({ route, onStatusUpdate }: RouteMonitoringProps)
             </div>
           </div>
         ) : (
-          <Button 
-            className="w-full" 
-            onClick={handleStartMonitoring}
-          >
+          <Button className="w-full" onClick={handleStartMonitoring}>
             Start Monitoring
           </Button>
         )}

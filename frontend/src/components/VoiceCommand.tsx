@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Mic, MicOff, Loader2 } from 'lucide-react';
-import { aiService } from '@/lib/ai.service';
+import { Mic, MicOff, Loader2 } from "lucide-react";
+import { aiService } from "@/lib/ai.service";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
@@ -25,7 +25,7 @@ interface SpeechRecognitionErrorEvent extends Event {
 export function VoiceCommand() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [transcript, setTranscript] = useState<string>('');
+  const [transcript, setTranscript] = useState<string>("");
   const [result, setResult] = useState<any>(null);
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
@@ -34,17 +34,18 @@ export function VoiceCommand() {
 
   useEffect(() => {
     // Initialize speech recognition
-    if (typeof window !== 'undefined') {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (typeof window !== "undefined") {
+      const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SpeechRecognition) {
-        console.error('Speech recognition not supported');
+        console.error("Speech recognition not supported");
         return;
       }
 
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = true;
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
+      recognitionRef.current.lang = "en-US";
 
       // Set up recognition event handlers
       recognitionRef.current.onstart = () => {
@@ -56,13 +57,13 @@ export function VoiceCommand() {
       };
 
       recognitionRef.current.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
+        console.error("Speech recognition error:", event.error);
         setIsRecording(false);
         setIsProcessing(false);
         toast({
           title: "Error",
           description: "Failed to recognize speech. Please try again.",
-          variant: "destructive"
+          variant: "destructive",
         });
       };
 
@@ -70,34 +71,43 @@ export function VoiceCommand() {
         setIsRecording(false);
       };
 
-      recognitionRef.current.onresult = async (event: SpeechRecognitionEvent) => {
+      recognitionRef.current.onresult = async (
+        event: SpeechRecognitionEvent,
+      ) => {
         try {
           const current = event.resultIndex;
           const result = event.results[current];
           const transcriptText = result[0].transcript;
-          
+
           if (transcriptText.trim()) {
             setTranscript(transcriptText);
-            const response = await aiService.processVoiceCommand(transcriptText, context);
-            
+            const response = await aiService.processVoiceCommand(
+              transcriptText,
+              context,
+            );
+
             if (response) {
               handleCommandResult(response);
               setResult(response);
             } else {
-              throw new Error('Empty response from server');
+              throw new Error("Empty response from server");
             }
           }
         } catch (error) {
-          console.error('Voice command processing failed:', {
-            error: error instanceof Error ? error.message : 'Unknown error',
-            details: error
+          console.error("Voice command processing failed:", {
+            error: error instanceof Error ? error.message : "Unknown error",
+            details: error,
           });
-          setError(error instanceof Error ? error.message : 'Failed to process voice command');
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to process voice command",
+          );
         }
       };
 
       recognitionRef.current.onspeechstart = () => {
-        console.log('Speech started');
+        console.log("Speech started");
         toast({
           title: "Speech Detected",
           description: "Processing your voice...",
@@ -115,7 +125,7 @@ export function VoiceCommand() {
   const getCurrentPosition = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        reject(new Error('Geolocation not supported'));
+        reject(new Error("Geolocation not supported"));
         return;
       }
       navigator.geolocation.getCurrentPosition(resolve, reject);
@@ -125,15 +135,15 @@ export function VoiceCommand() {
   const handleCommandResult = (result: any) => {
     toast({
       title: "Command Processed",
-      description: result.response_message
+      description: result.response_message,
     });
 
     // Emit custom event for different command types
-    const event = new CustomEvent('voiceCommand', { 
-      detail: { 
+    const event = new CustomEvent("voiceCommand", {
+      detail: {
         type: result.command_type,
-        parameters: result.parameters
-      } 
+        parameters: result.parameters,
+      },
     });
     window.dispatchEvent(event);
   };
@@ -143,7 +153,7 @@ export function VoiceCommand() {
       toast({
         title: "Error",
         description: "Speech recognition not supported in your browser.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -151,11 +161,11 @@ export function VoiceCommand() {
     try {
       recognitionRef.current.start();
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error("Failed to start recording:", error);
       toast({
         title: "Error",
         description: "Could not start voice recognition. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -165,7 +175,7 @@ export function VoiceCommand() {
       try {
         recognitionRef.current.stop();
       } catch (error) {
-        console.error('Failed to stop recording:', error);
+        console.error("Failed to stop recording:", error);
       }
     }
     setIsRecording(false);
@@ -218,4 +228,4 @@ export function VoiceCommand() {
       )}
     </div>
   );
-} 
+}

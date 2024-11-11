@@ -1,80 +1,66 @@
-import { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Search } from 'lucide-react';
-import { aiService } from '@/lib/ai.service';
-import type { SearchResult } from '@/lib/ai.service';
+import { Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import type { GeoLocation } from "@/types/index";
 
-export function SafePlacesSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+interface SafePlacesSearchProps {
+  currentLocation: GeoLocation;
+  onError: (error: string) => void;
+}
 
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-    
-    setIsLoading(true);
-    try {
-      // Get current location
-      const position = await getCurrentPosition();
-      
-      const searchResults = await aiService.searchSafePlaces(
-        query,
-        {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-          timestamp: new Date()
-        }
-      );
-      
-      setResults(searchResults);
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getCurrentPosition = (): Promise<GeolocationPosition> => {
-    return new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject);
-    });
-  };
+export function SafePlacesSearch({
+  currentLocation,
+  onError,
+}: SafePlacesSearchProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const nearbyPlaces = [
+    { id: "1", name: "Central Police Station", distance: "0.5 miles" },
+    { id: "2", name: "City Hospital", distance: "0.8 miles" },
+    { id: "3", name: "24/7 Pharmacy", distance: "1.2 miles" },
+    { id: "4", name: "Community Center", distance: "1.5 miles" },
+  ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 mt-4">
       <div className="flex gap-2">
-        <Input
-          placeholder="Search safe places..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-        />
-        <Button onClick={handleSearch} disabled={isLoading}>
-          <Search className="h-4 w-4 mr-2" />
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search safe places..."
+            className="pl-9 pr-4"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Button variant="default" className="shrink-0">
           Search
         </Button>
       </div>
 
-      <div className="grid gap-4">
-        {results.map((result) => (
-          <Card key={result.place_id}>
-            <CardContent className="p-4">
-              <h3 className="font-semibold">{result.name}</h3>
-              <p className="text-sm text-muted-foreground">{result.formatted_address}</p>
-              <div className="mt-2 flex items-center gap-2">
-                <div className="text-sm">
-                  Safety Score: {result.safety_score}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {result.distance}m away
-                </div>
+      <div>
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">
+          Nearby Safe Places
+        </h3>
+        <div className="space-y-2">
+          {nearbyPlaces.map((place) => (
+            <div
+              key={place.id}
+              className="flex items-center justify-between p-3 rounded-lg bg-background hover:bg-accent/50 transition-colors"
+            >
+              <div>
+                <p className="font-medium">{place.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {place.distance}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+              <Button variant="ghost" size="sm">
+                View Details
+              </Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
-} 
+}

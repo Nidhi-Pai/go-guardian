@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Location } from "@/types/index";
-import { useMaps } from '@/contexts/MapsContext';
+import { useMaps } from "@/contexts/MapsContext";
 
 interface LocationSearchProps {
-  onLocationSelect: (location: Omit<Location, 'timestamp'>) => void;
+  onLocationSelect: (location: Omit<Location, "timestamp">) => void;
   loading?: boolean;
   disabled?: boolean;
   placeholder?: string;
@@ -16,10 +16,20 @@ interface LocationSearchProps {
   showCurrentLocationButton?: boolean;
 }
 
-const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, placeholder, initialValue, showFindRouteButton = false, showCurrentLocationButton = false }: LocationSearchProps) => {
+const LocationSearch = ({
+  onLocationSelect,
+  loading = false,
+  disabled = false,
+  placeholder,
+  initialValue,
+  showFindRouteButton = false,
+  showCurrentLocationButton = false,
+}: LocationSearchProps) => {
   const { isLoaded, placesService, geocoder } = useMaps();
-  const [searchQuery, setSearchQuery] = useState(initialValue || '');
-  const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [searchQuery, setSearchQuery] = useState(initialValue || "");
+  const [predictions, setPredictions] = useState<
+    google.maps.places.AutocompletePrediction[]
+  >([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
@@ -32,38 +42,43 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
         placesService?.getDetails(
           {
             placeId: placeId,
-            fields: ['formatted_address', 'geometry']
+            fields: ["formatted_address", "geometry"],
           },
           (place, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+            if (
+              status === google.maps.places.PlacesServiceStatus.OK &&
+              place?.geometry?.location
+            ) {
               const location = {
                 lat: place.geometry.location.lat(),
                 lng: place.geometry.location.lng(),
-                address: place.formatted_address
+                address: place.formatted_address,
               };
               onLocationSelect(location);
-              setSearchQuery(place.formatted_address || '');
+              setSearchQuery(place.formatted_address || "");
               setPredictions([]);
               setShowSuggestions(false);
             }
-          }
+          },
         );
       } else {
         // Fallback to geocoding if manual search
-        const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
-          geocoder?.geocode({ address: searchQuery }, (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-              resolve(results[0]);
-            } else {
-              reject(new Error('Location not found'));
-            }
-          });
-        });
+        const result = await new Promise<google.maps.GeocoderResult>(
+          (resolve, reject) => {
+            geocoder?.geocode({ address: searchQuery }, (results, status) => {
+              if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+                resolve(results[0]);
+              } else {
+                reject(new Error("Location not found"));
+              }
+            });
+          },
+        );
 
         const location = {
           lat: result.geometry.location.lat(),
           lng: result.geometry.location.lng(),
-          address: result.formatted_address
+          address: result.formatted_address,
         };
 
         onLocationSelect(location);
@@ -71,12 +86,12 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
         setShowSuggestions(false);
       }
     } catch (error) {
-      console.error('Location search error:', error);
+      console.error("Location search error:", error);
     }
   };
 
   const handleInputChange = (value: string) => {
-    console.log("handleInputChange", value)
+    console.log("handleInputChange", value);
     setSearchQuery(value);
     if (!value.trim()) {
       setPredictions([]);
@@ -84,21 +99,24 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
       return;
     }
 
-    console.log("placesService", placesService)
+    console.log("placesService", placesService);
 
     // Get predictions as user types
     const autocompleteService = new google.maps.places.AutocompleteService();
     autocompleteService.getPlacePredictions(
       {
         input: value,
-        types: ['geocode', 'establishment']
+        types: ["geocode", "establishment"],
       },
       (predictions, status) => {
-        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+        if (
+          status === google.maps.places.PlacesServiceStatus.OK &&
+          predictions
+        ) {
           setPredictions(predictions);
           setShowSuggestions(true);
         }
-      }
+      },
     );
   };
 
@@ -107,37 +125,47 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
     navigator.geolocation.getCurrentPosition(
       async (position) => {
         try {
-          const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
-            geocoder?.geocode(
-              { location: { lat: position.coords.latitude, lng: position.coords.longitude } },
-              (results, status) => {
-                if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-                  resolve(results[0]);
-                } else {
-                  reject(new Error('Location not found'));
-                }
-              }
-            );
-          });
+          const result = await new Promise<google.maps.GeocoderResult>(
+            (resolve, reject) => {
+              geocoder?.geocode(
+                {
+                  location: {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                  },
+                },
+                (results, status) => {
+                  if (
+                    status === google.maps.GeocoderStatus.OK &&
+                    results?.[0]
+                  ) {
+                    resolve(results[0]);
+                  } else {
+                    reject(new Error("Location not found"));
+                  }
+                },
+              );
+            },
+          );
 
           const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
-            address: result.formatted_address
+            address: result.formatted_address,
           };
 
           onLocationSelect(location);
           setSearchQuery(result.formatted_address);
         } catch (error) {
-          console.error('Error getting current location:', error);
+          console.error("Error getting current location:", error);
         } finally {
           setGettingLocation(false);
         }
       },
       (error) => {
-        console.error('Geolocation error:', error);
+        console.error("Geolocation error:", error);
         setGettingLocation(false);
-      }
+      },
     );
   };
 
@@ -164,11 +192,13 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
             disabled={disabled || loading || gettingLocation}
             title="Use current location"
           >
-            <Navigation className={`h-4 w-4 ${gettingLocation ? 'animate-pulse' : ''}`} />
+            <Navigation
+              className={`h-4 w-4 ${gettingLocation ? "animate-pulse" : ""}`}
+            />
           </Button>
         )}
         {showFindRouteButton && (
-          <Button 
+          <Button
             onClick={() => handleSearch()}
             disabled={disabled || loading || !searchQuery}
           >
@@ -191,7 +221,9 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
                 className="p-2 hover:bg-gray-100 cursor-pointer rounded"
                 onClick={() => handleSearch(prediction.place_id)}
               >
-                <div className="font-medium">{prediction.structured_formatting.main_text}</div>
+                <div className="font-medium">
+                  {prediction.structured_formatting.main_text}
+                </div>
                 <div className="text-sm text-gray-500">
                   {prediction.structured_formatting.secondary_text}
                 </div>

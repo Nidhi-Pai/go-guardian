@@ -3,13 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import {
-  Shield,
-  AlertTriangle,
-  MapPin,
-  Building,
-  Clock
-} from "lucide-react";
+import { Shield, AlertTriangle, MapPin, Building, Clock } from "lucide-react";
 
 interface RouteInfo {
   distance: string;
@@ -35,14 +29,16 @@ interface SafetyAnalysisPanelProps {
 
 export function SafetyAnalysisPanel({
   safetyAnalysis,
-  routeInfo
+  routeInfo,
 }: SafetyAnalysisPanelProps) {
   if (!safetyAnalysis) {
     return (
       <Card>
         <CardContent className="py-8 text-center">
           <Shield className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-          <p className="text-lg font-medium">Select a destination for safety analysis</p>
+          <p className="text-lg font-medium">
+            Select a destination for safety analysis
+          </p>
           <p className="text-sm text-muted-foreground mt-1">
             We'll analyze the route and provide safety recommendations
           </p>
@@ -67,18 +63,25 @@ export function SafetyAnalysisPanel({
         <CardContent>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className={`text-4xl font-bold ${getSafetyColor(safetyAnalysis.safety_score)}`}>
+              <span
+                className={`text-4xl font-bold ${getSafetyColor(safetyAnalysis.safety_score)}`}
+              >
                 {safetyAnalysis.safety_score}%
               </span>
-              <Shield className={`h-8 w-8 ${getSafetyColor(safetyAnalysis.safety_score)}`} />
+              <Shield
+                className={`h-8 w-8 ${getSafetyColor(safetyAnalysis.safety_score)}`}
+              />
             </div>
-            <Progress 
-              value={safetyAnalysis.safety_score} 
-              className="h-2"
-            />
+            <Progress value={safetyAnalysis.safety_score} className="h-2" />
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Risk Level:</span>
-              <Badge variant={safetyAnalysis.risk_level === 'low' ? 'default' : 'destructive'}>
+              <Badge
+                variant={
+                  safetyAnalysis.risk_level === "low"
+                    ? "default"
+                    : "destructive"
+                }
+              >
                 {safetyAnalysis.risk_level.toUpperCase()}
               </Badge>
             </div>

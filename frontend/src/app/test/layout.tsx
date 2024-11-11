@@ -1,13 +1,9 @@
 // src/app/test/layout.tsx
 
 export default function TestLayout({
-    children,
-  }: {
-    children: React.ReactNode
-  }) {
-    return (
-      <div className="min-h-screen bg-background">
-        {children}
-      </div>
-    );
-  }
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="min-h-screen bg-background">{children}</div>;
+}

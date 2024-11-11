@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Cloud, Thermometer, Wind, Droplets, AlertTriangle } from "lucide-react";
+import {
+  Cloud,
+  Thermometer,
+  Wind,
+  Droplets,
+  AlertTriangle,
+} from "lucide-react";
 import type { Location, WeatherData } from "@/types/index";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,7 +28,7 @@ export function WeatherAlert({ location }: WeatherAlertProps) {
 
       try {
         const response = await fetch(
-          `/api/weather?lat=${location.lat}&lng=${location.lng}`
+          `/api/weather?lat=${location.lat}&lng=${location.lng}`,
         );
 
         if (!response.ok) {
@@ -73,7 +79,7 @@ export function WeatherAlert({ location }: WeatherAlertProps) {
                 ))}
               </div>
             )}
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <Thermometer className="h-5 w-5 text-red-500" />
@@ -82,23 +88,27 @@ export function WeatherAlert({ location }: WeatherAlertProps) {
                   <p className="font-medium">{weatherData.current.temp_c}°C</p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Wind className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Wind Speed</p>
-                  <p className="font-medium">{weatherData.current.wind_kph} km/h</p>
+                  <p className="font-medium">
+                    {weatherData.current.wind_kph} km/h
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Droplets className="h-5 w-5 text-blue-500" />
                 <div>
                   <p className="text-sm text-muted-foreground">Precipitation</p>
-                  <p className="font-medium">{weatherData.current.precip_mm} mm</p>
+                  <p className="font-medium">
+                    {weatherData.current.precip_mm} mm
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Cloud className="h-5 w-5 text-gray-500" />
                 <div>
@@ -109,9 +119,7 @@ export function WeatherAlert({ location }: WeatherAlertProps) {
             </div>
           </div>
         ) : (
-          <p className="text-muted-foreground">
-            No weather data available
-          </p>
+          <p className="text-muted-foreground">No weather data available</p>
         )}
       </CardContent>
     </Card>

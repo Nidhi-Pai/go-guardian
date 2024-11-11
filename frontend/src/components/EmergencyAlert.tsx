@@ -15,28 +15,28 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { 
-  AlertTriangle, 
-  AlertOctagon, 
-  Phone, 
-  Video, 
-  Mic, 
+import {
+  AlertTriangle,
+  AlertOctagon,
+  Phone,
+  Video,
+  Mic,
   Share2,
   Shield,
   Wifi,
   Battery,
-  Circle
+  Circle,
 } from "lucide-react";
 import type { Location, SafetyAlert } from "@/types/index";
 
 interface EmergencyAlertProps {
   currentLocation: Location;
-  onAlertSent: (alert: SafetyAlert) => void;  // Changed from onEmergencyTriggered
+  onAlertSent: (alert: SafetyAlert) => void; // Changed from onEmergencyTriggered
 }
 
 export function EmergencyAlert({
   currentLocation,
-  onAlertSent,  // Changed from onEmergencyTriggered
+  onAlertSent, // Changed from onEmergencyTriggered
 }: EmergencyAlertProps) {
   // Core states
   const [isOpen, setIsOpen] = useState(false);
@@ -45,14 +45,18 @@ export function EmergencyAlert({
   const [confirmationMode, setConfirmationMode] = useState(false);
   const [shakeCount, setShakeCount] = useState(0);
   const shakeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Recording states
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingType, setRecordingType] = useState<'video' | 'audio' | null>(null);
-  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(null);
+  const [recordingType, setRecordingType] = useState<"video" | "audio" | null>(
+    null,
+  );
+  const [recordingStream, setRecordingStream] = useState<MediaStream | null>(
+    null,
+  );
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
-  
+
   // Device states
   const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -63,12 +67,12 @@ export function EmergencyAlert({
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
     };
   }, []);
 
@@ -76,16 +80,16 @@ export function EmergencyAlert({
   useEffect(() => {
     const getBatteryStatus = async () => {
       try {
-        if ('getBattery' in navigator) {
+        if ("getBattery" in navigator) {
           const battery: any = await (navigator as any).getBattery();
           setBatteryLevel(Math.round(battery.level * 100));
 
-          battery.addEventListener('levelchange', () => {
+          battery.addEventListener("levelchange", () => {
             setBatteryLevel(Math.round(battery.level * 100));
           });
         }
       } catch (error) {
-        console.error('Battery status error:', error);
+        console.error("Battery status error:", error);
       }
     };
 
@@ -94,7 +98,9 @@ export function EmergencyAlert({
 
   // Shake detection
   useEffect(() => {
-    let lastX = 0, lastY = 0, lastZ = 0;
+    let lastX = 0,
+      lastY = 0,
+      lastZ = 0;
     let lastTime = new Date().getTime();
     const SHAKE_THRESHOLD = 15;
     const SHAKE_TIMEOUT = 3000; // Reset shake count after 3 seconds of no shaking
@@ -118,7 +124,7 @@ export function EmergencyAlert({
           }
 
           // Increment shake count
-          setShakeCount(prev => {
+          setShakeCount((prev) => {
             const newCount = prev + 1;
             if (newCount >= 5) {
               setIsOpen(true);
@@ -142,12 +148,12 @@ export function EmergencyAlert({
     };
 
     if (window.DeviceMotionEvent) {
-      window.addEventListener('devicemotion', handleMotion);
+      window.addEventListener("devicemotion", handleMotion);
     }
 
     return () => {
       if (window.DeviceMotionEvent) {
-        window.removeEventListener('devicemotion', handleMotion);
+        window.removeEventListener("devicemotion", handleMotion);
       }
       if (shakeTimeoutRef.current) {
         clearTimeout(shakeTimeoutRef.current);
@@ -159,7 +165,7 @@ export function EmergencyAlert({
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (isOpen && confirmationMode && countdown > 0) {
-      timer = setTimeout(() => setCountdown(count => count - 1), 1000);
+      timer = setTimeout(() => setCountdown((count) => count - 1), 1000);
     } else if (countdown === 0) {
       setConfirmationMode(false);
       setCountdown(5);
@@ -176,7 +182,7 @@ export function EmergencyAlert({
     };
   }, []);
 
-  const startRecording = async (type: 'video' | 'audio') => {
+  const startRecording = async (type: "video" | "audio") => {
     try {
       // Stop any existing recording
       if (isRecording) {
@@ -184,8 +190,8 @@ export function EmergencyAlert({
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: type === 'video',
-        audio: true
+        video: type === "video",
+        audio: true,
       });
 
       setRecordingStream(stream);
@@ -205,17 +211,16 @@ export function EmergencyAlert({
 
       mediaRecorder.onstop = () => {
         const blob = new Blob(recordedChunksRef.current, {
-          type: type === 'video' ? 'video/webm' : 'audio/webm'
+          type: type === "video" ? "video/webm" : "audio/webm",
         });
         // Here you would typically upload the blob to your server
-        console.log('Recording stopped, blob created:', blob);
+        console.log("Recording stopped, blob created:", blob);
       };
 
       mediaRecorder.start(1000); // Collect data every second
       return stream;
-
     } catch (error) {
-      console.error('Recording error:', error);
+      console.error("Recording error:", error);
       setIsRecording(false);
       setRecordingType(null);
       return null;
@@ -223,12 +228,15 @@ export function EmergencyAlert({
   };
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
 
     if (recordingStream) {
-      recordingStream.getTracks().forEach(track => track.stop());
+      recordingStream.getTracks().forEach((track) => track.stop());
     }
 
     setRecordingStream(null);
@@ -238,56 +246,57 @@ export function EmergencyAlert({
 
   const handleSendAlert = async () => {
     setAlertTriggered(true);
-    
+
     let stream = null;
-    if (!isRecording) {  // Only start recording if not already recording
-      stream = await startRecording('video');
+    if (!isRecording) {
+      // Only start recording if not already recording
+      stream = await startRecording("video");
     }
 
     const alert: SafetyAlert = {
       id: Date.now().toString(),
-      userId: 'current-user-id', // Replace with actual user ID
-      message: 'Emergency SOS Alert',
+      userId: "current-user-id", // Replace with actual user ID
+      message: "Emergency SOS Alert",
       location: currentLocation,
-      type: 'sos',
+      type: "sos",
       timestamp: new Date(),
-      status: 'active',
+      status: "active",
       isRecording: isRecording || !!stream,
-      mediaType: recordingType || (stream ? 'video' : null),
+      mediaType: recordingType || (stream ? "video" : null),
       additionalInfo: {
         batteryLevel,
-        networkStatus: isOnline ? 'online' : 'offline',
+        networkStatus: isOnline ? "online" : "offline",
         nearestSafeSpaces: [], // To be populated from safety analysis
-        contactsNotified: [] // To be populated when contacts are notified
-      }
+        contactsNotified: [], // To be populated when contacts are notified
+      },
     };
 
     // Trigger device features
-    if ('vibrate' in navigator) {
+    if ("vibrate" in navigator) {
       navigator.vibrate([500, 200, 500]); // Pattern: vibrate, pause, vibrate
     }
 
     // Play alert sound
     try {
-      const audio = new Audio('/alert-sound.mp3');
+      const audio = new Audio("/alert-sound.mp3");
       await audio.play();
     } catch (error) {
-      console.error('Audio playback error:', error);
+      console.error("Audio playback error:", error);
     }
 
     onAlertSent(alert);
-    
+
     // Reset states but keep recording if started
     setIsOpen(false);
     setCountdown(5);
     setAlertTriggered(false);
   };
 
-  const QuickAction = ({ 
-    icon: Icon, 
-    label, 
+  const QuickAction = ({
+    icon: Icon,
+    label,
     variant = "outline",
-    onClick 
+    onClick,
   }: {
     icon: any;
     label: string;
@@ -307,8 +316,10 @@ export function EmergencyAlert({
   const DeviceStatus = () => (
     <div className="flex items-center gap-3 text-sm text-muted-foreground">
       <div className="flex items-center gap-1">
-        <Wifi className={`h-4 w-4 ${isOnline ? 'text-green-500' : 'text-red-500'}`} />
-        {isOnline ? 'Online' : 'Offline'}
+        <Wifi
+          className={`h-4 w-4 ${isOnline ? "text-green-500" : "text-red-500"}`}
+        />
+        {isOnline ? "Online" : "Offline"}
       </div>
       {batteryLevel !== null && (
         <div className="flex items-center gap-1">
@@ -325,7 +336,7 @@ export function EmergencyAlert({
     </div>
   );
 
-  const ShakeProgress = () => (
+  const ShakeProgress = () =>
     shakeCount > 0 && (
       <div className="absolute -top-16 right-0 bg-background border rounded-lg p-2 shadow-lg">
         <div className="flex items-center gap-2">
@@ -335,37 +346,39 @@ export function EmergencyAlert({
               <div
                 key={i}
                 className={`w-2 h-2 rounded-full ${
-                  i < shakeCount ? 'bg-destructive' : 'bg-muted'
+                  i < shakeCount ? "bg-destructive" : "bg-muted"
                 }`}
               />
             ))}
           </div>
         </div>
       </div>
-    )
-  );
+    );
 
   return (
     <div className="fixed bottom-6 right-6">
       <ShakeProgress />
-      <Dialog open={isOpen} onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) {
-          setConfirmationMode(false);
-          setCountdown(5);
-          setShakeCount(0);
-        }
-      }}>
+      <Dialog
+        open={isOpen}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) {
+            setConfirmationMode(false);
+            setCountdown(5);
+            setShakeCount(0);
+          }
+        }}
+      >
         <DialogTrigger asChild>
-          <Button 
-            variant="destructive" 
-            size="lg" 
+          <Button
+            variant="destructive"
+            size="lg"
             className="h-16 w-16 rounded-full shadow-lg hover:shadow-xl transition-all relative"
           >
             <AlertOctagon className="h-8 w-8" />
             {isRecording && (
-              <Badge 
-                variant="destructive" 
+              <Badge
+                variant="destructive"
                 className="absolute -top-2 -right-2 animate-pulse"
               >
                 REC
@@ -382,7 +395,9 @@ export function EmergencyAlert({
             <DialogDescription>
               {confirmationMode ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-destructive">{countdown}</span>
+                  <span className="text-2xl font-bold text-destructive">
+                    {countdown}
+                  </span>
                   <span>seconds to cancel emergency alert</span>
                 </div>
               ) : (
@@ -410,23 +425,31 @@ export function EmergencyAlert({
                 />
                 <QuickAction
                   icon={Video}
-                  label={isRecording && recordingType === 'video' ? "Stop Recording" : "Record Video"}
+                  label={
+                    isRecording && recordingType === "video"
+                      ? "Stop Recording"
+                      : "Record Video"
+                  }
                   onClick={() => {
                     if (isRecording) {
                       stopRecording();
                     } else {
-                      startRecording('video');
+                      startRecording("video");
                     }
                   }}
                 />
                 <QuickAction
                   icon={Mic}
-                  label={isRecording && recordingType === 'audio' ? "Stop Audio" : "Record Audio"}
+                  label={
+                    isRecording && recordingType === "audio"
+                      ? "Stop Audio"
+                      : "Record Audio"
+                  }
                   onClick={() => {
                     if (isRecording) {
                       stopRecording();
                     } else {
-                      startRecording('audio');
+                      startRecording("audio");
                     }
                   }}
                 />
@@ -437,7 +460,8 @@ export function EmergencyAlert({
               <Alert>
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
-                  Select an action above. Emergency calls will require confirmation.
+                  Select an action above. Emergency calls will require
+                  confirmation.
                 </AlertDescription>
               </Alert>
             </>
@@ -472,7 +496,7 @@ export function EmergencyAlert({
                 <Button
                   variant="destructive"
                   onClick={() => {
-                    window.location.href = 'tel:911';
+                    window.location.href = "tel:911";
                     handleSendAlert();
                   }}
                   className="flex-1"

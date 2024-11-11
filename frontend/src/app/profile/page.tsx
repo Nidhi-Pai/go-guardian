@@ -38,9 +38,9 @@ import { Separator } from "@/components/ui/separator";
 
 export default function ProfilePage() {
   const [editing, setEditing] = React.useState(false);
-  const [name, setName] = React.useState('Jane Doe');
-  const [email, setEmail] = React.useState('jane.doe@example.com');
-  const [phone, setPhone] = React.useState('+1 (555) 123-4567');
+  const [name, setName] = React.useState("Jane Doe");
+  const [email, setEmail] = React.useState("jane.doe@example.com");
+  const [phone, setPhone] = React.useState("+1 (555) 123-4567");
   const [profileImage, setProfileImage] = React.useState<string | null>(null);
   const { toast } = useToast();
 
@@ -73,7 +73,9 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Profile</h1>
-            <p className="text-muted-foreground mt-1">Manage your personal information</p>
+            <p className="text-muted-foreground mt-1">
+              Manage your personal information
+            </p>
           </div>
           <Button variant="outline" onClick={() => window.history.back()}>
             Back
@@ -86,7 +88,9 @@ export default function ProfilePage() {
               <User className="h-5 w-5 text-primary" />
               Personal Information
             </CardTitle>
-            <CardDescription>Manage your personal details and preferences</CardDescription>
+            <CardDescription>
+              Manage your personal details and preferences
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row md:items-start md:gap-8">
@@ -95,7 +99,10 @@ export default function ProfilePage() {
                   <Avatar className="w-40 h-40 border-4 border-background">
                     <AvatarImage src={profileImage || undefined} />
                     <AvatarFallback className="text-4xl bg-primary/10">
-                      {name.split(' ').map(n => n[0]).join('')}
+                      {name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
                     </AvatarFallback>
                   </Avatar>
                   <label
@@ -140,7 +147,10 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="email"
+                        className="flex items-center gap-2"
+                      >
                         <Mail className="h-4 w-4" />
                         Email
                       </Label>
@@ -153,7 +163,10 @@ export default function ProfilePage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="phone" className="flex items-center gap-2">
+                      <Label
+                        htmlFor="phone"
+                        className="flex items-center gap-2"
+                      >
                         <PhoneIcon className="h-4 w-4" />
                         Phone
                       </Label>

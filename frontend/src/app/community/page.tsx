@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import React, { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Users,
   MessageCircle,
@@ -16,8 +16,8 @@ import {
   Clock,
   ThumbsUp,
   Share2,
-  CircleUser
-} from 'lucide-react';
+  CircleUser,
+} from "lucide-react";
 
 interface SafetyGroup {
   id: number;
@@ -31,7 +31,7 @@ interface SafetyGroup {
 
 interface Alert {
   id: number;
-  type: 'safety' | 'emergency';
+  type: "safety" | "emergency";
   message: string;
   location: string;
   timestamp: string;
@@ -40,62 +40,67 @@ interface Alert {
 
 const CommunityPage = () => {
   const [selectedGroup, setSelectedGroup] = useState<SafetyGroup | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([
     {
       id: 1,
-      type: 'safety',
-      message: 'Construction work on Market Street - Please use alternate routes',
-      location: 'Financial District',
-      timestamp: '10 min ago',
-      verified: true
+      type: "safety",
+      message:
+        "Construction work on Market Street - Please use alternate routes",
+      location: "Financial District",
+      timestamp: "10 min ago",
+      verified: true,
     },
     {
       id: 2,
-      type: 'emergency',
-      message: 'Street light outage reported on Valencia Street',
-      location: 'Mission District',
-      timestamp: '25 min ago',
-      verified: true
-    }
+      type: "emergency",
+      message: "Street light outage reported on Valencia Street",
+      location: "Mission District",
+      timestamp: "25 min ago",
+      verified: true,
+    },
   ]);
 
   const [safetyGroups, setSafetyGroups] = useState<SafetyGroup[]>([
     {
       id: 1,
-      name: 'Financial District Watch',
+      name: "Financial District Watch",
       members: 1240,
       activeNow: 26,
-      description: 'Community safety updates for SF Financial District residents and workers',
-      tags: ['Business District', 'High Traffic'],
-      joined: false
+      description:
+        "Community safety updates for SF Financial District residents and workers",
+      tags: ["Business District", "High Traffic"],
+      joined: false,
     },
     {
       id: 2,
-      name: 'Mission District Safety',
+      name: "Mission District Safety",
       members: 890,
       activeNow: 18,
-      description: 'Local safety network for Mission District neighborhood',
-      tags: ['Residential', 'Cultural District'],
-      joined: false
+      description: "Local safety network for Mission District neighborhood",
+      tags: ["Residential", "Cultural District"],
+      joined: false,
     },
     {
       id: 3,
-      name: 'Castro Community Alert',
+      name: "Castro Community Alert",
       members: 650,
       activeNow: 12,
-      description: 'Safety updates and community support in the Castro',
-      tags: ['Nightlife', 'Entertainment'],
-      joined: false
-    }
+      description: "Safety updates and community support in the Castro",
+      tags: ["Nightlife", "Entertainment"],
+      joined: false,
+    },
   ]);
 
-  const filteredGroups = safetyGroups.filter(group =>
-    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    group.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredGroups = safetyGroups.filter(
+    (group) =>
+      group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      group.tags.some((tag) =>
+        tag.toLowerCase().includes(searchQuery.toLowerCase()),
+      ),
   );
 
   const handleCreateAlert = async () => {
@@ -104,15 +109,15 @@ const CommunityPage = () => {
       // TODO: Implement API call
       const newAlert: Alert = {
         id: alerts.length + 1,
-        type: 'safety',
-        message: 'New alert message',
-        location: selectedGroup?.name || 'General',
-        timestamp: 'Just now',
-        verified: false
+        type: "safety",
+        message: "New alert message",
+        location: selectedGroup?.name || "General",
+        timestamp: "Just now",
+        verified: false,
       };
-      setAlerts(prev => [newAlert, ...prev]);
+      setAlerts((prev) => [newAlert, ...prev]);
     } catch (err) {
-      setError('Failed to create alert. Please try again.');
+      setError("Failed to create alert. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -122,19 +127,19 @@ const CommunityPage = () => {
     setIsLoading(true);
     try {
       // TODO: Implement API call
-      setSafetyGroups(prev =>
-        prev.map(group =>
+      setSafetyGroups((prev) =>
+        prev.map((group) =>
           group.id === groupId
             ? {
                 ...group,
                 joined: !group.joined,
-                members: group.joined ? group.members - 1 : group.members + 1
+                members: group.joined ? group.members - 1 : group.members + 1,
               }
-            : group
-        )
+            : group,
+        ),
       );
     } catch (err) {
-      setError('Failed to update membership. Please try again.');
+      setError("Failed to update membership. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -142,12 +147,12 @@ const CommunityPage = () => {
 
   // Add these style mappings
   const tagColors: Record<string, string> = {
-    'Business District': 'bg-blue-100 text-blue-800',
-    'High Traffic': 'bg-yellow-100 text-yellow-800',
-    'Residential': 'bg-green-100 text-green-800',
-    'Cultural District': 'bg-purple-100 text-purple-800',
-    'Nightlife': 'bg-pink-100 text-pink-800',
-    'Entertainment': 'bg-indigo-100 text-indigo-800'
+    "Business District": "bg-blue-100 text-blue-800",
+    "High Traffic": "bg-yellow-100 text-yellow-800",
+    Residential: "bg-green-100 text-green-800",
+    "Cultural District": "bg-purple-100 text-purple-800",
+    Nightlife: "bg-pink-100 text-pink-800",
+    Entertainment: "bg-indigo-100 text-indigo-800",
   };
 
   return (
@@ -172,9 +177,9 @@ const CommunityPage = () => {
                 />
                 <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
-              
+
               <div className="space-y-4">
-                {filteredGroups.map(group => (
+                {filteredGroups.map((group) => (
                   <Card
                     key={group.id}
                     className="hover:shadow-md transition-all duration-200 cursor-pointer p-4"
@@ -187,9 +192,9 @@ const CommunityPage = () => {
                           variant={group.joined ? "outline" : "default"}
                           size="sm"
                           className={`rounded-full px-4 transition-colors ${
-                            group.joined 
-                              ? 'bg-primary/10 text-primary hover:bg-primary/20' 
-                              : 'bg-primary text-white hover:bg-primary/90'
+                            group.joined
+                              ? "bg-primary/10 text-primary hover:bg-primary/20"
+                              : "bg-primary text-white hover:bg-primary/90"
                           }`}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -197,17 +202,19 @@ const CommunityPage = () => {
                           }}
                           disabled={isLoading}
                         >
-                          {group.joined ? 'Leave' : 'Join'}
+                          {group.joined ? "Leave" : "Join"}
                         </Button>
                       </div>
 
-                      <p className="text-sm text-muted-foreground">{group.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {group.description}
+                      </p>
 
                       <div className="flex flex-wrap gap-2">
-                        {group.tags.map(tag => (
-                          <span 
+                        {group.tags.map((tag) => (
+                          <span
                             key={tag}
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tagColors[tag] || 'bg-gray-100 text-gray-800'}`}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tagColors[tag] || "bg-gray-100 text-gray-800"}`}
                           >
                             {tag}
                           </span>
@@ -245,7 +252,7 @@ const CommunityPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Button 
+              <Button
                 className="w-full mb-6 bg-primary/10 hover:bg-primary/20 text-primary"
                 onClick={handleCreateAlert}
                 disabled={isLoading}
@@ -259,12 +266,12 @@ const CommunityPage = () => {
               </Button>
 
               <div className="space-y-4">
-                {alerts.map(alert => (
+                {alerts.map((alert) => (
                   <Card key={alert.id} className="border-l-4 border-l-primary">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-3">
-                          {alert.type === 'emergency' ? (
+                          {alert.type === "emergency" ? (
                             <AlertTriangle className="h-5 w-5 text-destructive mt-1" />
                           ) : (
                             <Shield className="h-5 w-5 text-primary mt-1" />
@@ -281,11 +288,19 @@ const CommunityPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-4">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                        >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Comment
                         </Button>
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground"
+                        >
                           <Share2 className="h-4 w-4 mr-2" />
                           Share
                         </Button>

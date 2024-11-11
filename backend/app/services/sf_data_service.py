@@ -200,7 +200,7 @@ class SFDataService:
             raise
 
 
-        def _analyze_incidents(self, df: pd.DataFrame) -> Dict:
+    def _analyze_incidents(self, df: pd.DataFrame) -> Dict:
         """Analyze incident patterns and trends"""
         try:
             if df.empty:
@@ -226,7 +226,7 @@ class SFDataService:
             # Recent trend (last 7 days vs previous 7 days)
             recent_mask = df['date'] >= (datetime.now() - timedelta(days=7))
             previous_mask = ((df['date'] < (datetime.now() - timedelta(days=7))) & 
-                           (df['date'] >= (datetime.now() - timedelta(days=14))))
+                        (df['date'] >= (datetime.now() - timedelta(days=14))))
             
             recent_count = len(df[recent_mask])
             previous_count = len(df[previous_mask])
