@@ -64,6 +64,44 @@ interface RouteResponse {
 
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+interface FromLocationProps {
+  currentLocation: Location | null;
+  locationStatus: 'loading' | 'denied' | 'error' | 'success';
+  onLocationSelect: (location: Location) => void;
+}
+
+function FromLocationInput({ currentLocation, locationStatus, onLocationSelect }: FromLocationProps) {
+  return (
+    <div>
+      <label className="text-sm font-medium mb-2 block">From</label>
+      <div className="space-y-2">
+        <LocationSearch
+          onLocationSelect={(location) => onLocationSelect({ ...location, timestamp: new Date() })}
+          placeholder="Enter starting location"
+          initialValue={currentLocation?.address}
+          showFindRouteButton={false}
+        />
+        {currentLocation && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-xs"
+            onClick={() => onLocationSelect(currentLocation)}
+          >
+            Use current location
+          </Button>
+        )}
+        {locationStatus === 'loading' && (
+          <p className="text-sm text-muted-foreground">Getting your location...</p>
+        )}
+        {locationStatus === 'denied' && (
+          <p className="text-sm text-muted-foreground">Please enable location access</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SafeRoutePage() {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
@@ -77,6 +115,7 @@ export default function SafeRoutePage() {
   const [isInitializing, setIsInitializing] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
+  const [startLocation, setStartLocation] = useState<Location | null>(null);
 
   const locationOptions = {
     enableHighAccuracy: true,
@@ -95,13 +134,37 @@ export default function SafeRoutePage() {
   useEffect(() => {
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCurrentLocation({
+        async (position) => {
+          const geocoder = new google.maps.Geocoder();
+          const latlng = {
             lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            timestamp: new Date()
-          });
-          setLocationStatus('success');
+            lng: position.coords.longitude
+          };
+          
+          try {
+            const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
+              geocoder.geocode({ location: latlng }, (results, status) => {
+                if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+                  resolve(results[0]);
+                } else {
+                  reject(new Error('Geocoding failed'));
+                }
+              });
+            });
+
+            const newLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              address: result.formatted_address,
+              timestamp: new Date()
+            };
+            setCurrentLocation(newLocation);
+            setStartLocation(newLocation);
+            setLocationStatus('success');
+          } catch (error) {
+            console.error('Geocoding error:', error);
+            setLocationStatus('error');
+          }
         },
         (error) => {
           console.error('Geolocation error:', error);
@@ -269,6 +332,10 @@ export default function SafeRoutePage() {
     }
   };
 
+  const handleStartLocationSelect = (location: Location) => {
+    setStartLocation(location);
+  };
+
   if (!GOOGLE_MAPS_API_KEY) {
     return (
       <Alert variant="destructive">
@@ -324,14 +391,28 @@ export default function SafeRoutePage() {
 
       {/* Search Bar */}
       <Card className="shadow-lg">
-        <CardContent className="pt-6">
-          <LocationSearch
-            onLocationSelect={handleLocationSelect}
-            loading={loading}
-            disabled={!currentLocation}
+        <CardContent className="pt-6 space-y-4">
+          <FromLocationInput
+            currentLocation={currentLocation}
+            locationStatus={locationStatus}
+            onLocationSelect={handleStartLocationSelect}
           />
+
+          {/* To Location */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">To</label>
+            <LocationSearch
+              onLocationSelect={handleLocationSelect}
+              loading={loading}
+              disabled={!startLocation}
+              placeholder="Where do you want to go?"
+              showFindRouteButton={true}
+            />
+          </div>
+
+          {/* Existing status messages */}
           {locationStatus === 'denied' && (
-            <p className="text-sm text-muted-foreground mt-2">
+            <p className="text-sm text-muted-foreground">
               Please enable location access in your browser settings to use route planning
             </p>
           )}
@@ -340,20 +421,9 @@ export default function SafeRoutePage() {
               onClick={retryLocationRequest}
               variant="outline"
               size="sm"
-              className="mt-2"
             >
               Retry Location Request
             </Button>
-          )}
-          {locationStatus === 'loading' && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Getting your location...
-            </p>
-          )}
-          {currentLocation?.address && (
-            <p className="text-sm text-muted-foreground mt-2">
-              Current location: {currentLocation.address}
-            </p>
           )}
         </CardContent>
       </Card>
@@ -378,8 +448,9 @@ export default function SafeRoutePage() {
                 {currentLocation && (
                   <SafeRouteMap
                     apiKey={GOOGLE_MAPS_API_KEY}
-                    initialLocation={currentLocation}
-                    destination={destination}
+                    initialLocation={{ lat: currentLocation.lat, lng: currentLocation.lng }}
+                    fromLocation={startLocation ? `${startLocation.lat},${startLocation.lng}` : ''}
+                    toLocation={destination ? `${destination.lat},${destination.lng}` : ''}
                     onRouteCalculated={handleRouteCalculated}
                   />
                 )}

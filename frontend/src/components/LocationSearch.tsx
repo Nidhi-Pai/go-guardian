@@ -6,13 +6,16 @@ import { Card } from "@/components/ui/card";
 import { Location } from "@/types/index";
 
 interface LocationSearchProps {
-  onLocationSelect: (location: Location) => void;
+  onLocationSelect: (location: Omit<Location, 'timestamp'>) => void;
   loading?: boolean;
   disabled?: boolean;
+  placeholder?: string;
+  initialValue?: string;
+  showFindRouteButton?: boolean;
 }
 
-const LocationSearch = ({ onLocationSelect, loading = false, disabled = false }: LocationSearchProps) => {
-  const [searchQuery, setSearchQuery] = useState('');
+const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, placeholder, initialValue, showFindRouteButton = false }: LocationSearchProps) => {
+  const [searchQuery, setSearchQuery] = useState(initialValue || '');
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
@@ -113,7 +116,7 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false }:
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Where would you like to go?"
+            placeholder={placeholder}
             className="pl-8"
             value={searchQuery}
             onChange={(e) => handleInputChange(e.target.value)}
@@ -121,16 +124,18 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false }:
             disabled={disabled || loading}
           />
         </div>
-        <Button 
-          onClick={() => handleSearch()}
-          disabled={disabled || loading || !searchQuery}
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            "Find Route"
-          )}
-        </Button>
+        {showFindRouteButton && (
+          <Button 
+            onClick={() => handleSearch()}
+            disabled={disabled || loading || !searchQuery}
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              "Find Route"
+            )}
+          </Button>
+        )}
       </div>
 
       {/* Location suggestions dropdown */}

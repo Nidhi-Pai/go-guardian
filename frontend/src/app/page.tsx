@@ -24,6 +24,7 @@ import { WeatherAlert } from "@/components/WeatherAlert";
 import type { Location, SafetyAnalysis, SafetyAlert } from "@/types/index";
 import { aiService } from "@/lib/ai.service";
 import { toast, useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
 const quickActions = [
   {
@@ -68,6 +69,8 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
   const { toast } = useToast();
+  const [fromLocation, setFromLocation] = useState<string>("");
+  const [toLocation, setToLocation] = useState<string>("");
 
   const locationOptions = {
     enableHighAccuracy: true,
@@ -180,18 +183,43 @@ export default function HomePage() {
         <div className="lg:col-span-2 space-y-8">
           {currentLocation && (
             <Card className="overflow-hidden shadow-lg">
-              <CardHeader className="flex flex-row items-center justify-between bg-gradient-to-r from-primary/10 to-transparent">
-                <CardTitle className="text-2xl">Safety Map</CardTitle>
-                <Button variant="outline" size="sm" className="hover:bg-primary/10">
-                  View Full Map
-                </Button>
+              <CardHeader className="flex flex-col space-y-4 bg-gradient-to-r from-primary/10 to-transparent">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-2xl">Safety Map</CardTitle>
+                  <Button variant="outline" size="sm" className="hover:bg-primary/10">
+                    View Full Map
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label htmlFor="from" className="text-sm font-medium">From</label>
+                    <Input
+                      id="from"
+                      placeholder="Enter starting location"
+                      value={fromLocation}
+                      onChange={(e) => setFromLocation(e.target.value)}
+                      className="bg-white/50 focus:bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="to" className="text-sm font-medium">To</label>
+                    <Input
+                      id="to"
+                      placeholder="Enter destination"
+                      value={toLocation}
+                      onChange={(e) => setToLocation(e.target.value)}
+                      className="bg-white/50 focus:bg-white"
+                    />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="p-0">
                 <div className="h-[500px]">
                   <SafeRouteMap
                     apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
                     initialLocation={currentLocation}
-                    destination={null}
+                    fromLocation={fromLocation}
+                    toLocation={toLocation}
                     onRouteCalculated={handleRouteCalculated}
                   />
                 </div>

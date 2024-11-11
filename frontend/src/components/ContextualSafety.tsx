@@ -34,22 +34,12 @@ const logger = {
   }
 };
 
-const getFallbackAnalysis = () => ({
-  safety_score: 70,
+const getFallbackAnalysis = (): SafetyContext => ({
+  safety_score: 50,
   risk_level: 'medium',
-  primary_concerns: [
-    'Unable to fetch real-time safety data',
-    'Using fallback safety assessment'
-  ],
-  recommendations: [
-    'Stay aware of your surroundings',
-    'Keep to well-lit areas',
-    'Have emergency contacts ready'
-  ],
-  safe_spots: [
-    'Nearby businesses during operating hours',
-    'Public spaces with good visibility'
-  ]
+  primary_concerns: ['No real-time data available'],
+  recommendations: ['Exercise normal precautions'],
+  safe_spots: ['Nearby public places']
 });
 
 export function ContextualSafety({ location }: ContextualSafetyProps) {
@@ -94,7 +84,7 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
         
         if (responseData.status === 'success' && responseData.data) {
           setContext({
-            safety_score: responseData.data.safety_score || 0,
+            safety_score: responseData.data.safety_score ?? 50,
             risk_level: responseData.data.risk_level || 'unknown',
             primary_concerns: responseData.data.primary_concerns || [],
             recommendations: responseData.data.recommendations || [],

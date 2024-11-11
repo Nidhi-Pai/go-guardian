@@ -13,11 +13,11 @@ interface Location {
 }
 
 interface SafeRouteMapProps {
-  apiKey?: string;
+  apiKey: string;
   initialLocation: Location;
-  destination: Location | null;
-  onRouteCalculated?: (route: google.maps.DirectionsResult) => void;
-  onError?: (error: string) => void;
+  fromLocation: string;
+  toLocation: string;
+  onRouteCalculated: (route: google.maps.DirectionsResult) => void;
 }
 
 const mapContainerStyle = {
@@ -49,9 +49,9 @@ const libraries: ("places" | "geometry" | "drawing")[] = ["places", "geometry"];
 export function SafeRouteMap({ 
   apiKey, 
   initialLocation, 
-  destination, 
-  onRouteCalculated, 
-  onError 
+  fromLocation, 
+  toLocation, 
+  onRouteCalculated 
 }: SafeRouteMapProps) {
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
   const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
@@ -81,10 +81,10 @@ export function SafeRouteMap({
   }, []);
 
   React.useEffect(() => {
-    if (destination && directionsService && directionsRenderer && map) {
+    if (toLocation && directionsService && directionsRenderer && map) {
       directionsService.route({
-        origin: initialLocation,
-        destination: destination,
+        origin: fromLocation,
+        destination: toLocation,
         travelMode: google.maps.TravelMode.WALKING,
         provideRouteAlternatives: true
       }, (result, status) => {
@@ -96,7 +96,7 @@ export function SafeRouteMap({
         }
       });
     }
-  }, [destination, directionsService, directionsRenderer, map, initialLocation, onRouteCalculated]);
+  }, [fromLocation, toLocation, directionsService, directionsRenderer, map, onRouteCalculated]);
 
   if (!apiKey) {
     return (
@@ -154,7 +154,7 @@ export function SafeRouteMap({
           disableDoubleClickZoom: true,
         }}
       >
-        {!destination && <Marker position={initialLocation} />}
+        {!toLocation && <Marker position={initialLocation} />}
       </GoogleMap>
     </div>
   );
