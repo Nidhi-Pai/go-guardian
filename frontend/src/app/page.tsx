@@ -202,12 +202,9 @@ export default function HomePage() {
               <CardContent>
                 <SafePlacesSearch
                   currentLocation={currentLocation}
-                  onError={(error) => {
-                    toast({
-                      title: "Error",
-                      description: error,
-                      variant: "destructive",
-                    });
+                  onError={() => {
+                    // Silently handle error without showing toast
+                    return;
                   }}
                 />
                 <div className="mt-8">

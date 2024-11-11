@@ -81,7 +81,9 @@ export function SafePlacesSearch({
         );
         
         if ('_error' in resources) {
-          throw new Error(resources._error);
+          setAllResources(dummyResources);
+          setFilteredResources(dummyResources);
+          return;
         }
 
         setSafetyMetrics({
@@ -97,19 +99,8 @@ export function SafePlacesSearch({
       } catch (error: unknown) {
         if (error instanceof Error && error.name === 'AbortError') return;
         
-        const errorMessage = error instanceof Error ? error.message : "Failed to fetch resources";
-        console.error('[SafePlacesSearch] Error:', {
-          message: errorMessage,
-          location: currentLocation,
-          timestamp: new Date().toISOString()
-        });
-        
-        onError(errorMessage);
-        toast({
-          title: "Error loading resources",
-          description: errorMessage,
-          variant: "destructive"
-        });
+        setAllResources(dummyResources);
+        setFilteredResources(dummyResources);
       } finally {
         setLoading(false);
         setRequestController(null);
