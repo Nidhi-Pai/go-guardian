@@ -1,10 +1,14 @@
 # backend/app/services/emergency_service.py
 
+import json
 from typing import Dict, Any, List
 import google.generativeai as genai
 from datetime import datetime
 import requests
 import logging
+import aiohttp
+import asyncio
+from flask import current_app
 
 class EmergencyService:
     def __init__(self, api_key: str):
@@ -53,64 +57,56 @@ class EmergencyService:
         radius = 0.01  # Approximately 1km
         
         try:
-            # Fetch nearby police stations
-            police = requests.get(
-                self.emergency_endpoints['police'],
-                params={
-                    '$where': f"""
-                        within_circle(
-                            location,
-                            {location['lat']},
-                            {location['lng']},
-                            {radius}
-                        )
-                    """
-                }
-            ).json()
+            async with aiohttp.ClientSession() as session:
+                # Fetch all resources concurrently
+                tasks = [
+                    self._fetch_resource(session, 'police', location, radius),
+                    self._fetch_resource(session, 'hospitals', location, radius),
+                    self._fetch_resource(session, 'safe_places', location, radius)
+                ]
+                police, hospitals, safe_places = await asyncio.gather(*tasks)
 
-            # Fetch nearby hospitals
-            hospitals = requests.get(
-                self.emergency_endpoints['hospitals'],
-                params={
-                    '$where': f"""
-                        within_circle(
-                            location,
-                            {location['lat']},
-                            {location['lng']},
-                            {radius}
-                        )
-                    """
-                }
-            ).json()
-
-            # Fetch safe places (24/7 businesses, etc.)
-            safe_places = requests.get(
-                self.emergency_endpoints['safe_places'],
-                params={
-                    '$where': f"""
-                        within_circle(
-                            location,
-                            {location['lat']},
-                            {location['lng']},
-                            {radius}
-                        )
-                    """
-                }
-            ).json()
-
-            return {
+            resources = {
                 'police': self._process_police_stations(police),
                 'hospitals': self._process_hospitals(hospitals),
                 'safe_places': self._process_safe_places(safe_places)
             }
+            
+            current_app.logger.info(f"Successfully fetched emergency resources: {resources}")
+            return resources
 
         except Exception as e:
-            self.logger.error(f"Error fetching emergency resources: {str(e)}")
+            current_app.logger.error(f"Error fetching emergency resources: {str(e)}", exc_info=True)
             return {
                 'police': [],
                 'hospitals': [],
-                'safe_places': []
+                'safe_places': [],
+                '_error': str(e)
             }
+
+    async def _fetch_resource(
+        self, 
+        session: aiohttp.ClientSession,
+        resource_type: str,
+        location: Dict[str, float],
+        radius: float
+    ) -> List[Dict]:
+        """Fetch a specific resource type"""
+        try:
+            async with session.get(
+                self.emergency_endpoints[resource_type],
+                params={
+                    '$where': f"within_circle(location, {location['lat']}, {location['lng']}, {radius})"
+                }
+            ) as response:
+                if response.status == 200:
+                    return await response.json()
+                else:
+                    current_app.logger.error(f"Error fetching {resource_type}: {response.status}")
+                    return []
+        except Exception as e:
+            current_app.logger.error(f"Error fetching {resource_type}: {str(e)}")
+            return []
 
     async def _generate_emergency_response(
         self,
@@ -158,8 +154,23 @@ class EmergencyService:
             'name': station.get('name', 'Police Station'),
             'address': station.get('address', 'Unknown'),
             'phone': station.get('phone', '911'),
-            'distance': station.get('distance', 'Unknown')
+            'distance': station.get('distance', 'Unknown'),
+            'safety_score': self._calculate_station_safety_score(station)
         } for station in stations]
+
+    def _calculate_station_safety_score(self, station: Dict) -> float:
+        """Calculate safety score for a station based on response times and incident data"""
+        try:
+            # You can use existing SFDataService methods here
+            base_score = 80  # Base safety score
+            response_factor = station.get('avg_response_time', 15)
+            incident_factor = station.get('recent_incidents', 10)
+            
+            score = base_score - (response_factor / 2) - (incident_factor / 2)
+            return max(0, min(100, score))
+        except Exception as e:
+            current_app.logger.error(f"Error calculating station safety score: {str(e)}")
+            return 70  # Default fallback score
 
     def _process_hospitals(self, hospitals: List[Dict]) -> List[Dict]:
         """Process hospital data"""

@@ -1,7 +1,7 @@
 # backend/app/services/camera_analyzer.py
 
 import google.generativeai as genai
-from typing import Dict, Any
+from typing import Dict, Any, List
 import base64
 import logging
 from datetime import datetime
@@ -85,3 +85,39 @@ class CameraAnalyzer:
             "visibility_score": 70,
             "crowd_density": "low"
         }
+
+    async def analyze_behavior_patterns(
+        self,
+        video_frames: List[str],
+        location: Dict[str, float]
+    ) -> Dict[str, Any]:
+        """Analyze behavior patterns in video feed"""
+        try:
+            prompt = f"""
+            Analyze this sequence of video frames for suspicious behavior patterns.
+            Location: Lat {location['lat']}, Lng {location['lng']}
+            Time: {datetime.now().strftime('%H:%M')}
+
+            Consider:
+            1. Movement patterns
+            2. Group dynamics
+            3. Suspicious activities
+            4. Environmental factors
+            5. Time-based risk factors
+
+            Return analysis as JSON with:
+            {{
+                "behavior_patterns": [string],
+                "risk_indicators": [string],
+                "crowd_dynamics": object,
+                "suspicious_activities": [string],
+                "recommended_actions": [string],
+                "confidence_score": number
+            }}
+            """
+
+            response = self.model.generate_content([video_frames[-1], prompt])
+            return self._parse_response(response.text)
+        except Exception as e:
+            self.logger.error(f"Behavior analysis error: {str(e)}")
+            return self._get_fallback_analysis()

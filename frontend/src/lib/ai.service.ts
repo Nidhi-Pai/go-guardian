@@ -42,6 +42,48 @@ export interface SearchResult {
   };
 }
 
+interface SafetyMetrics {
+  overall_score: number;
+  incident_analysis?: {
+    total_incidents: number;
+    hourly_distribution: Record<string, number>;
+    time_patterns: Record<string, number>;
+  };
+  infrastructure?: {
+    total_lights: number;
+    working_lights: number;
+    coverage_score: number;
+  };
+  response_metrics?: {
+    mean_response_time: number;
+    resolution_rate: number;
+  };
+}
+
+interface EmergencyResource {
+  id: string;
+  name: string;
+  address: string;
+  distance: string;
+  type: 'police' | 'hospital' | 'safe_place';
+  safetyScore?: number;
+  phone?: string;
+  emergency?: boolean;
+  hours?: string;
+  infrastructure?: {
+    total_lights: number;
+    working_lights: number;
+  };
+}
+
+export type EmergencyResources = {
+  police: EmergencyResource[];
+  hospitals: EmergencyResource[];
+  safe_places: EmergencyResource[];
+  safety_metrics?: SafetyMetrics;
+  _error?: string;
+}
+
 export class AIService {
   private readonly apiUrl: string;
   private readonly referrer: string;
@@ -254,6 +296,41 @@ export class AIService {
     }
   }
 
+  async getNearbyEmergencyResources(location: Location, signal?: AbortSignal): Promise<EmergencyResources> {
+    if (!location || typeof location.lat !== 'number' || typeof location.lng !== 'number') {
+      return this.getEmptyResourcesResponse('Invalid location data');
+    }
+
+    try {
+      const response = await fetch(`${this.apiUrl}/safety/emergency-resources`, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+          "Referer": this.referrer,
+        },
+        credentials: "include",
+        body: JSON.stringify({ location }),
+        signal
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw error;
+      }
+      return this.getEmptyResourcesResponse(
+        error instanceof Error ? error.message : 'Network request failed'
+      );
+    }
+  }
+
   private convertToLocation(googleLocation: google.maps.LatLng): Location {
     return {
       lat: googleLocation.lat(),
@@ -307,6 +384,23 @@ export class AIService {
     } else {
       return "evening";
     }
+  }
+
+  private getEmptyResourcesResponse(errorMessage: string): EmergencyResources {
+    return {
+      police: [],
+      hospitals: [],
+      safe_places: [],
+      safety_metrics: {
+        overall_score: 0,
+        infrastructure: {
+          coverage_score: 0,
+          working_lights: 0,
+          total_lights: 0
+        }
+      },
+      _error: errorMessage
+    };
   }
 }
 

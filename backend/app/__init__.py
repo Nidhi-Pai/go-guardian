@@ -7,11 +7,31 @@ import os
 from .models import db
 from .config import Config
 from .services.gemini_service import GeminiService, GeminiServiceError
- 
+import logging
+from logging.handlers import RotatingFileHandler
+
 load_dotenv()
+
+def configure_logging(app):
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+        
+    file_handler = RotatingFileHandler(
+        'logs/emergency.log', 
+        maxBytes=10240, 
+        backupCount=10
+    )
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Emergency service startup')
 
 def create_app():
     app = Flask(__name__)
+    configure_logging(app)
 
     try:
         Config.validate()
@@ -99,7 +119,7 @@ def create_app():
     
     # Register core blueprints
     app.register_blueprint(safety_bp, url_prefix='/api/safety')
-    app.register_blueprint(emergency_bp, url_prefix='/api/emergency')
+    app.register_blueprint(emergency_bp, url_prefix='/api/safety')
     
     # Register new feature blueprints
     app.register_blueprint(monitoring_bp, url_prefix='/api/monitoring')
@@ -126,5 +146,14 @@ def create_app():
             "error": str(error),
             "status": "error"
         }), 500
+
+    # Add CORS headers for all routes
+    @app.after_request
+    def after_request(response):
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Referer')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
     return app

@@ -1,3 +1,4 @@
+import asyncio
 from typing import Dict, List, Optional, Tuple
 import aiohttp
 import pandas as pd

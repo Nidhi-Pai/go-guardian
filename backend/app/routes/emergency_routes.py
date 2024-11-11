@@ -1,10 +1,17 @@
 # backend/app/routes/emergency_routes.py
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, make_response
 from ..models import db, Alert, EmergencyContact
 from datetime import datetime
+from ..services.emergency_service import EmergencyService
+from ..services.search_service import LocationSearchService
+from ..services.sf_data_service import SFDataService
+import os
+from flask_cors import cross_origin
 
 emergency_bp = Blueprint('emergency', __name__)
+emergency_service = EmergencyService(api_key=os.getenv('GEMINI_API_KEY'))
+sf_data_service = SFDataService()
 
 @emergency_bp.route('/alert', methods=['POST'])
 def create_alert():
@@ -134,3 +141,116 @@ def manage_contacts():
         except Exception as e:
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
+
+@emergency_bp.route('/emergency-resources', methods=['POST', 'OPTIONS'])
+@cross_origin(origins=['http://localhost:3000'], supports_credentials=True)
+async def get_emergency_resources():
+    try:
+        data = request.get_json()
+        location = data.get('location')
+        
+        if not location or 'lat' not in location or 'lng' not in location:
+            current_app.logger.error(f"Invalid location data received: {location}")
+            return jsonify({
+                'error': 'Invalid location data',
+                'police': [],
+                'hospitals': [],
+                'safe_places': [],
+                'safety_metrics': {
+                    'overall_score': 0,
+                    'infrastructure': {
+                        'coverage_score': 0,
+                        'working_lights': 0,
+                        'total_lights': 0
+                    }
+                }
+            }), 400
+            
+        current_app.logger.info(f"Fetching emergency resources for location: {location}")
+        
+        # Get safety data from SFDataService
+        safety_data = await sf_data_service.get_area_safety_data(
+            lat=location['lat'],
+            lng=location['lng'],
+            radius_meters=1000,
+            time_window_days=30
+        )
+        
+        # Use LocationSearchService for place data
+        search_service = LocationSearchService()
+        resources = await search_service.search_nearby_places(
+            "emergency services",
+            location,
+            radius_meters=1000
+        )
+        
+        # Combine safety data with place results
+        processed_resources = {
+            'police': [],
+            'hospitals': [],
+            'safe_places': []
+        }
+        
+        for place in resources:
+            safety_score = safety_data.get('safety_score', 70)
+            base_info = {
+                'id': f"{place['name']}-{place['place_id']}",  # Add unique ID
+                'name': place['name'],
+                'address': place['formatted_address'],
+                'distance': place['distance'],
+                'safety_score': safety_score,
+                'phone': place.get('phone', ''),
+                'hours': place.get('hours', '')
+            }
+            
+            if 'police' in place['name'].lower():
+                processed_resources['police'].append({
+                    **base_info,
+                    'type': 'police',
+                    'infrastructure': {
+                        'total_lights': safety_data.get('infrastructure', {}).get('total_lights', 50),
+                        'working_lights': safety_data.get('infrastructure', {}).get('working_lights', 42)
+                    }
+                })
+            elif 'hospital' in place['name'].lower():
+                processed_resources['hospitals'].append({
+                    **base_info,
+                    'type': 'hospital',
+                    'emergency': True
+                })
+            else:
+                processed_resources['safe_places'].append({
+                    **base_info,
+                    'type': 'safe_place'
+                })
+        
+        # Add safety metrics to response
+        response_data = {
+            **processed_resources,
+            'safety_metrics': {
+                'overall_score': safety_data.get('safety_score', 85),
+                'infrastructure': {
+                    'coverage_score': safety_data.get('infrastructure', {}).get('coverage_score', 75),
+                    'working_lights': safety_data.get('infrastructure', {}).get('working_lights', 42),
+                    'total_lights': safety_data.get('infrastructure', {}).get('total_lights', 50)
+                }
+            }
+        }
+        
+        current_app.logger.info(
+            f"Found resources: Police: {len(processed_resources['police'])}, "
+            f"Hospitals: {len(processed_resources['hospitals'])}, "
+            f"Safe Places: {len(processed_resources['safe_places'])}"
+        )
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        current_app.logger.error(f"Emergency resources error: {str(e)}", exc_info=True)
+        return jsonify({
+            'error': str(e),
+            'police': [],
+            'hospitals': [],
+            'safe_places': [],
+            '_error': str(e)
+        }), 500
