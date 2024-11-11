@@ -133,6 +133,12 @@ export default function SafeRoutePage() {
 
   useEffect(() => {
     if ("geolocation" in navigator) {
+      if (typeof google === "undefined") {
+        console.error("Google Maps API not loaded");
+        setLocationStatus('error');
+        return;
+      }
+
       navigator.geolocation.getCurrentPosition(
         async (position) => {
           const geocoder = new google.maps.Geocoder();
@@ -447,7 +453,6 @@ export default function SafeRoutePage() {
               <div className="h-[600px]">
                 {currentLocation && (
                   <SafeRouteMap
-                    apiKey={GOOGLE_MAPS_API_KEY}
                     initialLocation={{ lat: currentLocation.lat, lng: currentLocation.lng }}
                     fromLocation={startLocation ? `${startLocation.lat},${startLocation.lng}` : ''}
                     toLocation={destination ? `${destination.lat},${destination.lng}` : ''}

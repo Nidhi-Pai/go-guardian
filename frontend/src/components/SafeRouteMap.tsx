@@ -3,9 +3,10 @@
 "use client";
 
 import React from 'react';
-import { GoogleMap, useLoadScript, Marker, DirectionsRenderer } from '@react-google-maps/api';
+import { GoogleMap, Marker, DirectionsRenderer } from '@react-google-maps/api';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { useMaps } from '@/contexts/MapsContext';
 
 interface Location {
   lat: number;
@@ -13,7 +14,6 @@ interface Location {
 }
 
 interface SafeRouteMapProps {
-  apiKey: string;
   initialLocation: Location;
   fromLocation: string;
   toLocation: string;
@@ -43,25 +43,17 @@ const mapStyles = [
   }
 ];
 
-// Add this constant outside the component
-const libraries: ("places" | "geometry" | "drawing")[] = ["places", "geometry"];
-
 export function SafeRouteMap({ 
-  apiKey, 
   initialLocation, 
   fromLocation, 
   toLocation, 
   onRouteCalculated 
 }: SafeRouteMapProps) {
+  const { isLoaded, loadError } = useMaps();
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
   const [directionsService, setDirectionsService] = React.useState<google.maps.DirectionsService | null>(null);
   const [directionsRenderer, setDirectionsRenderer] = React.useState<google.maps.DirectionsRenderer | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: apiKey || '',
-    libraries: libraries
-  });
 
   const onMapLoad = React.useCallback((map: google.maps.Map) => {
     setMap(map);
@@ -97,17 +89,6 @@ export function SafeRouteMap({
       });
     }
   }, [fromLocation, toLocation, directionsService, directionsRenderer, map, onRouteCalculated]);
-
-  if (!apiKey) {
-    return (
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          Google Maps API key is missing
-        </AlertDescription>
-      </Alert>
-    );
-  }
 
   if (!isLoaded) {
     return (

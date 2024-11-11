@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/Navbar";
+import Script from 'next/script'
+import { MapsProvider } from '@/contexts/MapsContext';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,12 +22,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <div className="min-h-screen bg-background">
+        <MapsProvider>
           <Navbar />
           <main className="container mx-auto px-4 py-8">
             {children}
           </main>
-        </div>
+        </MapsProvider>
       </body>
     </html>
   );

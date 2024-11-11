@@ -216,7 +216,6 @@ export default function HomePage() {
               <CardContent className="p-0">
                 <div className="h-[500px]">
                   <SafeRouteMap
-                    apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
                     initialLocation={currentLocation}
                     fromLocation={fromLocation}
                     toLocation={toLocation}

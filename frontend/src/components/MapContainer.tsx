@@ -1,11 +1,10 @@
 "use client";
 
 import React from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-
-const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+import { useMaps } from '@/contexts/MapsContext';
 
 const containerStyle = {
   width: '100%',
@@ -18,14 +17,10 @@ const defaultCenter = {
 };
 
 export default function MapContainer() {
+  const { isLoaded, loadError } = useMaps();
   const { toast } = useToast();
   const [center, setCenter] = React.useState(defaultCenter);
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
-
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY,
-    libraries: ['places']
-  });
 
   const onLoad = React.useCallback(function callback(map: google.maps.Map) {
     setMap(map);

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Location } from "@/types/index";
+import { useMaps } from '@/contexts/MapsContext';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Omit<Location, 'timestamp'>) => void;
@@ -15,20 +16,10 @@ interface LocationSearchProps {
 }
 
 const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, placeholder, initialValue, showFindRouteButton = false }: LocationSearchProps) => {
+  const { isLoaded, placesService, geocoder } = useMaps();
   const [searchQuery, setSearchQuery] = useState(initialValue || '');
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
-  const placesService = useRef<google.maps.places.PlacesService | null>(null);
-
-  useEffect(() => {
-    if (window.google) {
-      autocompleteService.current = new google.maps.places.AutocompleteService();
-      // Create a dummy div for PlacesService (required)
-      const dummyElement = document.createElement('div');
-      placesService.current = new google.maps.places.PlacesService(dummyElement);
-    }
-  }, [window.google]);
 
   const handleSearch = async (placeId?: string) => {
     if (!placeId && !searchQuery) return;
@@ -36,7 +27,7 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
     try {
       if (placeId) {
         // Get place details when selecting from suggestions
-        placesService.current?.getDetails(
+        placesService?.getDetails(
           {
             placeId: placeId,
             fields: ['formatted_address', 'geometry']
@@ -57,9 +48,8 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
         );
       } else {
         // Fallback to geocoding if manual search
-        const geocoder = new google.maps.Geocoder();
         const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
-          geocoder.geocode({ address: searchQuery }, (results, status) => {
+          geocoder?.geocode({ address: searchQuery }, (results, status) => {
             if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
               resolve(results[0]);
             } else {
@@ -92,10 +82,11 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
       return;
     }
 
-    console.log("autocompleteService.current", autocompleteService.current)
+    console.log("placesService", placesService)
 
     // Get predictions as user types
-    autocompleteService.current?.getPlacePredictions(
+    const autocompleteService = new google.maps.places.AutocompleteService();
+    autocompleteService.getPlacePredictions(
       {
         input: value,
         types: ['geocode', 'establishment']
