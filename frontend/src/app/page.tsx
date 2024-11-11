@@ -21,7 +21,9 @@ import { EmergencyAlert } from "@/components/EmergencyAlert";
 import { SafetyTips } from "@/components/SafetyTips";
 import { RecentActivity } from "@/components/RecentActivity";
 import { WeatherAlert } from "@/components/WeatherAlert";
-import type { Location } from "@/types/index";
+import type { Location, SafetyAnalysis, SafetyAlert } from "@/types/index";
+import { aiService } from "@/lib/ai.service";
+import { toast, useToast } from "@/hooks/use-toast";
 
 const quickActions = [
   {
@@ -64,6 +66,8 @@ export default function HomePage() {
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [safetyAnalysis, setSafetyAnalysis] = useState<SafetyAnalysis | null>(null);
+  const { toast } = useToast();
 
   const locationOptions = {
     enableHighAccuracy: true,
@@ -74,12 +78,21 @@ export default function HomePage() {
   useEffect(() => {
     if ("geolocation" in navigator) {
       const watchId = navigator.geolocation.watchPosition(
-        (position) => {
-          setCurrentLocation({
+        async (position) => {
+          const location = {
             lat: position.coords.latitude,
             lng: position.coords.longitude,
             timestamp: new Date(position.timestamp),
-          });
+          };
+          setCurrentLocation(location);
+          
+          try {
+            const analysis = await aiService.analyzeSafetyForLocation(location);
+            setSafetyAnalysis(analysis);
+          } catch (err) {
+            console.error('Safety analysis error:', err);
+          }
+          
           setLocationError(null);
           setIsLoading(false);
         },
@@ -98,8 +111,13 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleRouteCalculated = (route: google.maps.DirectionsResult) => {
-    console.log("Route calculated:", route);
+  const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {
+    try {
+      const monitoringData = await aiService.startRouteMonitoring(route);
+      console.log("Route monitoring started:", monitoringData);
+    } catch (error) {
+      console.error("Failed to start route monitoring:", error);
+    }
   };
 
   return (
@@ -184,8 +202,21 @@ export default function HomePage() {
           {currentLocation && (
             <EmergencyAlert
               currentLocation={currentLocation}
-              onAlertSent={(alert) => {
-                console.log("Emergency alert sent:", alert);
+              onAlertSent={async (alert: SafetyAlert) => {
+                try {
+                  await aiService.sendEmergencyAlert(currentLocation, alert.message);
+                  toast({
+                    title: "Emergency Alert Sent",
+                    description: "Emergency services have been notified.",
+                  });
+                } catch (error) {
+                  console.error("Failed to send emergency alert:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to send emergency alert. Please try again.",
+                    variant: "destructive",
+                  });
+                }
               }}
             />
           )}

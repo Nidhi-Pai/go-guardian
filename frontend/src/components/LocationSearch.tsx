@@ -3,12 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
-
-interface Location {
-  lat: number;
-  lng: number;
-  address?: string;
-}
+import { Location } from "@/types/index";
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
@@ -24,14 +19,13 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false }:
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
   useEffect(() => {
-    // Initialize Places Autocomplete service
-    if (window.google && !autocompleteService.current) {
+    if (window.google) {
       autocompleteService.current = new google.maps.places.AutocompleteService();
       // Create a dummy div for PlacesService (required)
       const dummyElement = document.createElement('div');
       placesService.current = new google.maps.places.PlacesService(dummyElement);
     }
-  }, []);
+  }, [window.google]);
 
   const handleSearch = async (placeId?: string) => {
     if (!placeId && !searchQuery) return;
@@ -87,12 +81,15 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false }:
   };
 
   const handleInputChange = (value: string) => {
+    console.log("handleInputChange", value)
     setSearchQuery(value);
     if (!value.trim()) {
       setPredictions([]);
       setShowSuggestions(false);
       return;
     }
+
+    console.log("autocompleteService.current", autocompleteService.current)
 
     // Get predictions as user types
     autocompleteService.current?.getPlacePredictions(

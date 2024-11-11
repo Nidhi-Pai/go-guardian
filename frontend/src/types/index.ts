@@ -2,6 +2,7 @@ export interface Location {
     lat: number;
     lng: number;
     timestamp?: Date;
+    address?: string;
   }
   
   export interface Route {
@@ -27,12 +28,31 @@ export interface Location {
     email?: string;
     relationship: string;
   }
+
+  export interface SafetyAnalysis {
+    safety_score: number;
+    risk_level: string;
+    primary_concerns: string[];
+    recommendations: string[];
+    safe_spots: string[];
+    emergency_resources: string[];
+    safer_alternatives?: string[];
+    confidence_score: number;
+  }
+
+  export interface EmergencyAlertPayload {
+    location: Location;
+    message: string;
+    timestamp: Date;
+    userId?: string;
+  }
   
   
   export interface SafetyAlert {
     id: string;
     userId: string;
     location: Location;
+    message: string;
     type: 'sos' | 'panic' | 'medical' | 'fire' | 'police';
     timestamp: Date;
     status: 'active' | 'resolved' | 'cancelled';
@@ -54,4 +74,29 @@ export interface Location {
     safe_spots?: string[];
     emergency_resources?: string[];
     confidence_score: number;
+  }
+
+  export interface RouteMonitoringData {
+    routeId: string;
+    startTime: Date;
+    checkpoints: Array<{
+      location: Location;
+      estimatedArrival: Date;
+    }>;
+    safetyScore: number;
+    activeMonitoring: boolean;
+  }
+
+  export interface RouteInfo {
+    distance: string;
+    duration: string;
+    steps: google.maps.DirectionsStep[];
+  }
+
+  export interface SafetyContext {
+    safety_score: number;
+    risk_level: string;
+    primary_concerns: string[];
+    recommendations: string[];
+    safe_spots: string[];
   }

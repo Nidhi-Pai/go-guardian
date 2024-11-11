@@ -79,11 +79,6 @@ class GeminiService:
                 prompt,
                 generation_config=self.generation_config,
                 safety_settings=[],
-                request_options={
-                    "headers": {
-                        "Referer": "http://localhost:8000"
-                    }
-                }
             )
             
             if not response or not response.text:

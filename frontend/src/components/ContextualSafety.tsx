@@ -65,7 +65,7 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
       setError(null);
       
       try {
-        const response = await fetch(`${API_BASE_URL}/api/safety/analyze-area`, {
+        const response = await fetch(`${API_BASE_URL}/safety/analyze-area`, {
           method: 'POST',
           headers: {
             'Accept': 'application/json',

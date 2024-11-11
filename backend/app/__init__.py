@@ -49,26 +49,7 @@ def create_app():
     # Initialize database
     db.init_app(app)
 
-    try:
-        Config.validate()
-        app.config.from_object(Config)
-        
-        # Initialize Gemini service
-        gemini_api_key = os.getenv('GEMINI_API_KEY')
-        if not gemini_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable is required")
-            
-        app.gemini_service = GeminiService(api_key=gemini_api_key)
-        
-        # Register blueprints
-        from .routes.safety_routes import safety_bp
-        app.register_blueprint(safety_bp, url_prefix='/api/safety')
-        
-        return app
-        
-    except Exception as e:
-        print(f"Application initialization error: {e}")
-        raise
+    
 
     # Debug route
     @app.route('/debug/routes')

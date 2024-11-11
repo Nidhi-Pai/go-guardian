@@ -247,6 +247,7 @@ export function EmergencyAlert({
     const alert: SafetyAlert = {
       id: Date.now().toString(),
       userId: 'current-user-id', // Replace with actual user ID
+      message: 'Emergency SOS Alert',
       location: currentLocation,
       type: 'sos',
       timestamp: new Date(),

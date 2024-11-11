@@ -24,7 +24,7 @@ safety_bp = Blueprint('safety', __name__)
 CORS(safety_bp, resources={
     r"/api/*": {
         "origins": ["http://localhost:3000"],
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["GET", "POST"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
     }
@@ -93,7 +93,7 @@ def analyze_route():
         # Get Gemini service from app context
         gemini_service = get_gemini_service()
         analysis = gemini_service.analyze_route(route_data)
-        
+         
         response = jsonify({
             'status': 'success',
             'data': {
@@ -179,7 +179,7 @@ def active_route(route_id):
             'error': str(e)
         }), 500
 
-@safety_bp.route('/analyze-area', methods=['POST', 'OPTIONS'])
+@safety_bp.route('/analyze-area', methods=['POST'])
 @cross_origin(supports_credentials=True, origins=['http://localhost:3000'])
 def analyze_area():
     try:
@@ -202,6 +202,8 @@ def analyze_area():
 
         logger.info(f"Analyzing area for location: {data['location']}")
         analysis = gemini_service.analyze_area(data['location'])
+
+        print("analysis", analysis)
         
         return jsonify({
             'status': 'success',

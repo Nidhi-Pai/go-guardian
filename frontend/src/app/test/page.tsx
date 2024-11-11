@@ -15,13 +15,7 @@ import {
 } from "lucide-react";
 import { SafeRouteMap } from "@/components/SafeRouteMap";
 import { EmergencyAlert } from "@/components/EmergencyAlert";
-
-// Types
-interface Location {
-  lat: number;
-  lng: number;
-  timestamp?: Date;
-}
+import { Location } from "@/types/index";
 
 interface QuickAction {
   title: string;

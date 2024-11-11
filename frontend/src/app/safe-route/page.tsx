@@ -30,6 +30,7 @@ interface Location {
   lat: number;
   lng: number;
   address?: string;
+  timestamp: Date;
 }
 
 interface SafetyAnalysis {
@@ -41,6 +42,8 @@ interface SafetyAnalysis {
   emergency_resources: string[];
   safer_alternatives?: string[];
   confidence_score: number;
+  risks: string[];
+  safe_spaces: string[];
 }
 
 interface RouteInfo {
@@ -96,6 +99,7 @@ export default function SafeRoutePage() {
           setCurrentLocation({
             lat: position.coords.latitude,
             lng: position.coords.longitude,
+            timestamp: new Date()
           });
           setLocationStatus('success');
         },
@@ -115,7 +119,7 @@ export default function SafeRoutePage() {
     routeDetails: RouteInfo
   ): Promise<SafetyAnalysis | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/safety/analyze-route`, {
+      const response = await fetch(`${API_BASE_URL}/safety/analyze-route`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -151,7 +155,14 @@ export default function SafeRoutePage() {
         return {
           ...data.data.analysis,
           risks: data.data.analysis.primary_concerns || [],
-          safe_spaces: data.data.analysis.safe_spots || []
+          safe_spaces: data.data.analysis.safe_spots || [],
+          safety_score: data.data.analysis.safety_score || 0,
+          risk_level: data.data.analysis.risk_level || 'unknown',
+          primary_concerns: data.data.analysis.primary_concerns || [],
+          recommendations: data.data.analysis.recommendations || [],
+          safe_spots: data.data.analysis.safe_spots || [],
+          emergency_resources: data.data.analysis.emergency_resources || [],
+          confidence_score: data.data.analysis.confidence_score || 0
         };
       }
       throw new Error(data.error || 'Failed to analyze route');
@@ -161,14 +172,18 @@ export default function SafeRoutePage() {
     }
   };
 
-  const handleLocationSelect = async (location: Location) => {
+  const handleLocationSelect = async (location: Omit<Location, 'timestamp'>) => {
     if (!currentLocation) return;
+
+    const locationWithTimestamp: Location = {
+      ...location,
+      timestamp: new Date()
+    };
 
     setLoading(true);
     setError(null);
-    setDestination(location);
+    setDestination(locationWithTimestamp);
     
-    // Don't set analyzing state until we have route info
     try {
       // Wait for a short delay to allow Google Maps to initialize
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -181,7 +196,7 @@ export default function SafeRoutePage() {
       setIsAnalyzing(true);
       const analysis = await analyzeSafetyForRoute(
         currentLocation,
-        location,
+        locationWithTimestamp,
         routeInfo
       );
       
@@ -235,9 +250,10 @@ export default function SafeRoutePage() {
 
   const requestLocationPermission = async () => {
     try {
-      const result = await navigator.permissions.query({ name: 'geolocation' });
+      const result = await navigator.permissions.query({ 
+        name: 'geolocation' as PermissionName 
+      });
       if (result.state === 'prompt') {
-        // This will trigger the permission prompt
         navigator.geolocation.getCurrentPosition(() => {}, () => {});
       }
     } catch (error) {
@@ -391,10 +407,14 @@ export default function SafeRoutePage() {
       {/* Emergency Alert */}
       {currentLocation && (
         <EmergencyAlert
-          currentLocation={currentLocation}
+          currentLocation={{
+            lat: currentLocation.lat,
+            lng: currentLocation.lng,
+            address: currentLocation.address || '',
+            timestamp: new Date()
+          }}
           onAlertSent={(alert: SafetyAlert) => {
             console.log('Emergency alert sent:', alert);
-            // Handle the alert as needed
           }}
         />
       )}
