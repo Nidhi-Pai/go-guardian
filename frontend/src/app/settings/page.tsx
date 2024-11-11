@@ -23,6 +23,9 @@ import {
   Settings as SettingsIcon,
   AlertTriangle,
   Lock,
+  Cog,
+  CogIcon,
+  Settings,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -100,7 +103,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+              <Settings className="h-5 w-5 text-primary" />
               Security & Privacy
             </CardTitle>
             <CardDescription>Manage your security preferences and privacy settings</CardDescription>
