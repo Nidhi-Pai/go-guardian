@@ -25,6 +25,8 @@ import type { Location, SafetyAnalysis, SafetyAlert } from "@/types/index";
 import { aiService } from "@/lib/ai.service";
 import { toast, useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { SafePlacesSearch } from "@/components/SafePlacesSearch";
+import { VoiceCommand } from "@/components/VoiceCommand";
 
 const quickActions = [
   {
@@ -225,7 +227,17 @@ export default function HomePage() {
               </CardContent>
             </Card>
           )}
-          
+        <div className="container mx-auto p-4">
+              <div className="flex justify-between items-center mb-4">
+                <h1 className="text-2xl font-bold">Safety Guardian</h1>
+                <VoiceCommand />
+              </div>
+              
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold mb-4">Find Safe Places</h2>
+                <SafePlacesSearch />
+              </div>
+            </div>       
           {currentLocation && (
             <EmergencyAlert
               currentLocation={currentLocation}

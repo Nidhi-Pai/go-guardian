@@ -11,6 +11,25 @@ export interface MonitoringStatus {
   }>;
 }
 
+export interface VoiceCommandResult {
+  command_type: 'emergency' | 'navigation' | 'safety_check' | 'contact';
+  action_required: string;
+  parameters: Record<string, any>;
+  confirmation_required: boolean;
+  response_message: string;
+}
+
+export interface SearchResult {
+  place_id: string;
+  name: string;
+  formatted_address: string;
+  location: Location;
+  safety_score: number;
+  risk_factors: string[];
+  safe_times: string[];
+  distance: number;
+}
+
 export class AIService {
   private readonly apiUrl: string;
   private readonly referrer: string;
@@ -157,6 +176,65 @@ export class AIService {
 
     if (!response.ok) {
       throw new Error('Failed to stop route monitoring');
+    }
+  }
+
+  async processVoiceCommand(command: string, location: Location): Promise<VoiceCommandResult> {
+    try {
+      const response = await fetch(`${this.apiUrl}/voice/process`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Referer': this.referrer
+        },
+        credentials: 'include',
+        body: JSON.stringify({ command, location })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process voice command');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Error processing voice command:', error);
+      throw error;
+    }
+  }
+
+  async searchSafePlaces(
+    query: string,
+    location: Location,
+    radius: number = 5000
+  ): Promise<SearchResult[]> {
+    try {
+      const response = await fetch(
+        `${this.apiUrl}/search/places?` + 
+        new URLSearchParams({
+          query,
+          lat: location.lat.toString(),
+          lng: location.lng.toString(),
+          radius: radius.toString()
+        }),
+        {
+          headers: {
+            'Accept': 'application/json',
+            'Referer': this.referrer
+          },
+          credentials: 'include'
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to search places');
+      }
+
+      const data = await response.json();
+      return data.results;
+    } catch (error) {
+      console.error('Error searching places:', error);
+      throw error;
     }
   }
 
