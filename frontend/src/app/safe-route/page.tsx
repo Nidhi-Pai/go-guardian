@@ -79,18 +79,9 @@ function FromLocationInput({ currentLocation, locationStatus, onLocationSelect }
           onLocationSelect={(location) => onLocationSelect({ ...location, timestamp: new Date() })}
           placeholder="Enter starting location"
           initialValue={currentLocation?.address}
+          showCurrentLocationButton={true}
           showFindRouteButton={false}
         />
-        {currentLocation && (
-          <Button 
-            variant="ghost" 
-            size="sm"
-            className="text-xs"
-            onClick={() => onLocationSelect(currentLocation)}
-          >
-            Use current location
-          </Button>
-        )}
         {locationStatus === 'loading' && (
           <p className="text-sm text-muted-foreground">Getting your location...</p>
         )}

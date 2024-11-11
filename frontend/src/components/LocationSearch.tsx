@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, Navigation } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Location } from "@/types/index";
 import { useMaps } from '@/contexts/MapsContext';
@@ -13,13 +13,15 @@ interface LocationSearchProps {
   placeholder?: string;
   initialValue?: string;
   showFindRouteButton?: boolean;
+  showCurrentLocationButton?: boolean;
 }
 
-const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, placeholder, initialValue, showFindRouteButton = false }: LocationSearchProps) => {
+const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, placeholder, initialValue, showFindRouteButton = false, showCurrentLocationButton = false }: LocationSearchProps) => {
   const { isLoaded, placesService, geocoder } = useMaps();
   const [searchQuery, setSearchQuery] = useState(initialValue || '');
   const [predictions, setPredictions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   const handleSearch = async (placeId?: string) => {
     if (!placeId && !searchQuery) return;
@@ -100,6 +102,45 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
     );
   };
 
+  const getCurrentLocation = () => {
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const result = await new Promise<google.maps.GeocoderResult>((resolve, reject) => {
+            geocoder?.geocode(
+              { location: { lat: position.coords.latitude, lng: position.coords.longitude } },
+              (results, status) => {
+                if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+                  resolve(results[0]);
+                } else {
+                  reject(new Error('Location not found'));
+                }
+              }
+            );
+          });
+
+          const location = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            address: result.formatted_address
+          };
+
+          onLocationSelect(location);
+          setSearchQuery(result.formatted_address);
+        } catch (error) {
+          console.error('Error getting current location:', error);
+        } finally {
+          setGettingLocation(false);
+        }
+      },
+      (error) => {
+        console.error('Geolocation error:', error);
+        setGettingLocation(false);
+      }
+    );
+  };
+
   return (
     <div className="relative">
       <div className="flex gap-2">
@@ -115,6 +156,17 @@ const LocationSearch = ({ onLocationSelect, loading = false, disabled = false, p
             disabled={disabled || loading}
           />
         </div>
+        {showCurrentLocationButton && (
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={getCurrentLocation}
+            disabled={disabled || loading || gettingLocation}
+            title="Use current location"
+          >
+            <Navigation className={`h-4 w-4 ${gettingLocation ? 'animate-pulse' : ''}`} />
+          </Button>
+        )}
         {showFindRouteButton && (
           <Button 
             onClick={() => handleSearch()}
