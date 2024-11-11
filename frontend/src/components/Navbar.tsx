@@ -22,8 +22,8 @@ const navItems = [
   { title: "Safe Route", path: "/safe-route", icon: MapPin },
   { title: "Community", path: "/community", icon: Users },
   { title: "Profile", path: "/profile", icon: User },
-  { title: "Settings", path: "/settings", icon: Settings },
   { title: "Emergency Contacts", path: "/emergency-contacts", icon: Phone },
+  { title: "Settings", path: "/settings", icon: Settings },
 ];
 
 export function Navbar() {

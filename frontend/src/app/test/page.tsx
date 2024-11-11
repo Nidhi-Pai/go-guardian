@@ -154,9 +154,9 @@ export default function HomePage() {
 
     return (
       <SafeRouteMap
-        apiKey={GOOGLE_MAPS_API_KEY}
         initialLocation={currentLocation}
-        destination={null}
+        fromLocation={`${currentLocation.lat},${currentLocation.lng}`}
+        toLocation={`${currentLocation.lat},${currentLocation.lng}`}
         onRouteCalculated={handleRouteCalculated}
       />
     );

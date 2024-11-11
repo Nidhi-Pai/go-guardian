@@ -449,8 +449,8 @@ export default function SafeRoutePage() {
 
         <TabsContent value="map">
           <Card className="overflow-hidden shadow-lg">
-            <CardContent className="p-0">
-              <div className="h-[600px]">
+            <CardContent className="p-0 relative" style={{ height: '600px' }}>
+              <div className="absolute inset-0">
                 {currentLocation && (
                   <SafeRouteMap
                     initialLocation={{ lat: currentLocation.lat, lng: currentLocation.lng }}
