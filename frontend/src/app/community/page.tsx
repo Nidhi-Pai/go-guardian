@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Clock,
   ThumbsUp,
-  Share2
+  Share2,
+  CircleUser
 } from 'lucide-react';
 
 interface SafetyGroup {
@@ -25,6 +26,7 @@ interface SafetyGroup {
   activeNow: number;
   description: string;
   tags: string[];
+  joined: boolean;
 }
 
 interface Alert {
@@ -34,11 +36,13 @@ interface Alert {
   location: string;
   timestamp: string;
   verified: boolean;
-  likes: number;
 }
 
 const CommunityPage = () => {
   const [selectedGroup, setSelectedGroup] = useState<SafetyGroup | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [alerts, setAlerts] = useState<Alert[]>([
     {
       id: 1,
@@ -46,8 +50,7 @@ const CommunityPage = () => {
       message: 'Construction work on Market Street - Please use alternate routes',
       location: 'Financial District',
       timestamp: '10 min ago',
-      verified: true,
-      likes: 15
+      verified: true
     },
     {
       id: 2,
@@ -55,19 +58,19 @@ const CommunityPage = () => {
       message: 'Street light outage reported on Valencia Street',
       location: 'Mission District',
       timestamp: '25 min ago',
-      verified: true,
-      likes: 8
+      verified: true
     }
   ]);
 
-  const safetyGroups: SafetyGroup[] = [
+  const [safetyGroups, setSafetyGroups] = useState<SafetyGroup[]>([
     {
       id: 1,
       name: 'Financial District Watch',
       members: 1240,
       activeNow: 26,
       description: 'Community safety updates for SF Financial District residents and workers',
-      tags: ['Business District', 'High Traffic']
+      tags: ['Business District', 'High Traffic'],
+      joined: false
     },
     {
       id: 2,
@@ -75,7 +78,8 @@ const CommunityPage = () => {
       members: 890,
       activeNow: 18,
       description: 'Local safety network for Mission District neighborhood',
-      tags: ['Residential', 'Cultural District']
+      tags: ['Residential', 'Cultural District'],
+      joined: false
     },
     {
       id: 3,
@@ -83,9 +87,68 @@ const CommunityPage = () => {
       members: 650,
       activeNow: 12,
       description: 'Safety updates and community support in the Castro',
-      tags: ['Nightlife', 'Entertainment']
+      tags: ['Nightlife', 'Entertainment'],
+      joined: false
     }
-  ];
+  ]);
+
+  const filteredGroups = safetyGroups.filter(group =>
+    group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    group.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    group.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const handleCreateAlert = async () => {
+    setIsLoading(true);
+    try {
+      // TODO: Implement API call
+      const newAlert: Alert = {
+        id: alerts.length + 1,
+        type: 'safety',
+        message: 'New alert message',
+        location: selectedGroup?.name || 'General',
+        timestamp: 'Just now',
+        verified: false
+      };
+      setAlerts(prev => [newAlert, ...prev]);
+    } catch (err) {
+      setError('Failed to create alert. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleJoinLeave = async (groupId: number) => {
+    setIsLoading(true);
+    try {
+      // TODO: Implement API call
+      setSafetyGroups(prev =>
+        prev.map(group =>
+          group.id === groupId
+            ? {
+                ...group,
+                joined: !group.joined,
+                members: group.joined ? group.members - 1 : group.members + 1
+              }
+            : group
+        )
+      );
+    } catch (err) {
+      setError('Failed to update membership. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add these style mappings
+  const tagColors: Record<string, string> = {
+    'Business District': 'bg-blue-100 text-blue-800',
+    'High Traffic': 'bg-yellow-100 text-yellow-800',
+    'Residential': 'bg-green-100 text-green-800',
+    'Cultural District': 'bg-purple-100 text-purple-800',
+    'Nightlife': 'bg-pink-100 text-pink-800',
+    'Entertainment': 'bg-indigo-100 text-indigo-800'
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -104,41 +167,67 @@ const CommunityPage = () => {
                 <Input
                   placeholder="Search safety groups..."
                   className="pl-8"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <MapPin className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               </div>
               
               <div className="space-y-4">
-                {safetyGroups.map(group => (
+                {filteredGroups.map(group => (
                   <Card
                     key={group.id}
-                    className={`cursor-pointer transition-all hover:shadow-md ${
-                      selectedGroup?.id === group.id ? 'border-primary' : ''
-                    }`}
+                    className="hover:shadow-md transition-all duration-200 cursor-pointer p-4"
                     onClick={() => setSelectedGroup(group)}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{group.name}</h3>
-                        <Badge variant="secondary" className="ml-2">
-                          {group.members} members
-                        </Badge>
+                    <div className="flex flex-col space-y-3">
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-medium text-lg">{group.name}</h3>
+                        <Button
+                          variant={group.joined ? "outline" : "default"}
+                          size="sm"
+                          className={`rounded-full px-4 transition-colors ${
+                            group.joined 
+                              ? 'bg-primary/10 text-primary hover:bg-primary/20' 
+                              : 'bg-primary text-white hover:bg-primary/90'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoinLeave(group.id);
+                          }}
+                          disabled={isLoading}
+                        >
+                          {group.joined ? 'Leave' : 'Join'}
+                        </Button>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        {group.description}
-                      </p>
+
+                      <p className="text-sm text-muted-foreground">{group.description}</p>
+
                       <div className="flex flex-wrap gap-2">
                         {group.tags.map(tag => (
-                          <Badge key={tag} variant="outline">
+                          <span 
+                            key={tag}
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${tagColors[tag] || 'bg-gray-100 text-gray-800'}`}
+                          >
                             {tag}
-                          </Badge>
+                          </span>
                         ))}
                       </div>
-                      <div className="flex items-center gap-2 mt-3 text-sm text-muted-foreground">
-                        <Users className="h-4 w-4" />
-                        {group.activeNow} active now
+
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <Users className="h-4 w-4 mr-2 text-primary" />
+                          {group.members} members
+                        </div>
+                        <div className="flex items-center">
+                          <div className="relative inline-flex items-center">
+                            <CircleUser className="h-4 w-4 mr-2 text-primary" />
+                            <div className="absolute right-1.5 top-0 w-2 h-2 bg-green-500 rounded-full ring-1 ring-white" />
+                          </div>
+                          <span>{group.activeNow} active</span>
+                        </div>
                       </div>
-                    </CardContent>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -156,8 +245,16 @@ const CommunityPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Button className="w-full mb-6 bg-primary/10 hover:bg-primary/20 text-primary">
-                <AlertTriangle className="h-4 w-4 mr-2" />
+              <Button 
+                className="w-full mb-6 bg-primary/10 hover:bg-primary/20 text-primary"
+                onClick={handleCreateAlert}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <span className="animate-spin mr-2">⏳</span>
+                ) : (
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                )}
                 Share Safety Alert
               </Button>
 
@@ -184,10 +281,6 @@ const CommunityPage = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-4 mt-4">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">
-                          <ThumbsUp className="h-4 w-4 mr-2" />
-                          {alert.likes}
-                        </Button>
                         <Button variant="ghost" size="sm" className="text-muted-foreground">
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Comment
