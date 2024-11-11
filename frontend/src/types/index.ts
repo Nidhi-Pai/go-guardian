@@ -100,3 +100,21 @@ export interface Location {
     recommendations: string[];
     safe_spots: string[];
   }
+
+  export interface WeatherAlert {
+    headline: string;
+    severity: string;
+    urgency: string;
+    description: string;
+  }
+  
+  export interface WeatherData {
+    alerts: WeatherAlert[];
+    current: {
+      temp_c: number;
+      condition: string;
+      wind_kph: number;
+      precip_mm: number;
+    } | null;
+    timestamp: string;
+  } 

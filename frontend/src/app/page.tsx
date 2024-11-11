@@ -81,39 +81,40 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        async (position) => {
-          const location = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-            timestamp: new Date(position.timestamp),
-          };
-          setCurrentLocation(location);
-          
-          try {
-            const analysis = await aiService.analyzeSafetyForLocation(location);
-            setSafetyAnalysis(analysis);
-          } catch (err) {
-            console.error('Safety analysis error:', err);
+    const requestLocationPermission = async () => {
+      try {
+        const result = await navigator.permissions.query({ name: 'geolocation' });
+        if (result.state === 'denied') {
+          setLocationError('Location access is denied. Please enable it in your browser settings.');
+          return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              timestamp: new Date(position.timestamp),
+            });
+            setLocationError(null);
+          },
+          (error) => {
+            console.error('Geolocation error:', error);
+            setLocationError('Unable to get your location. Please enable location services.');
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
           }
-          
-          setLocationError(null);
-          setIsLoading(false);
-        },
-        (error) => {
-          console.error('Geolocation error:', error);
-          setLocationError("Unable to get your location. Please enable location services.");
-          setIsLoading(false);
-        },
-        locationOptions
-      );
+        );
+      } catch (error) {
+        console.error('Permission error:', error);
+        setLocationError('Location permission error');
+      }
+    };
 
-      return () => navigator.geolocation.clearWatch(watchId);
-    } else {
-      setLocationError("Geolocation is not supported by your browser.");
-      setIsLoading(false);
-    }
+    requestLocationPermission();
   }, []);
 
   const handleRouteCalculated = async (route: google.maps.DirectionsResult) => {

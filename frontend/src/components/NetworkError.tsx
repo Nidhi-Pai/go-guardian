@@ -3,26 +3,15 @@ import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NetworkErrorProps {
-  message: string;
-  onRetry?: () => void;
+  error: string;
 }
 
-export function NetworkError({ message, onRetry }: NetworkErrorProps) {
+export function NetworkError({ error }: NetworkErrorProps) {
   return (
     <Alert variant="destructive">
       <AlertTriangle className="h-4 w-4" />
       <AlertDescription className="flex items-center justify-between">
-        <span>{message}</span>
-        {onRetry && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onRetry}
-            className="ml-4"
-          >
-            Retry
-          </Button>
-        )}
+        <span>{error}</span>
       </AlertDescription>
     </Alert>
   );
