@@ -1,42 +1,152 @@
 # Go Guardian: AI-Powered Safety Companion for Women
 
 ## Overview
-Go Guardian is an AI-powered safety companion application that helps women navigate cities safely by providing real-time safety analysis, intelligent route planning, and emergency assistance. Using advanced AI capabilities through Google's Gemini API, the app offers contextual safety recommendations and immediate response protocols in threatening situations.
+Go Guardian is an AI-powered safety companion application specifically designed to help women navigate cities safely. Using advanced AI capabilities through Google's Gemini API, the app provides real-time safety analysis, intelligent route planning, and emergency assistance with immediate response protocols in threatening situations.
+
+## Project Purpose & Impact
+
+### Current Challenges
+- 1 in 3 women worldwide experience physical or sexual violence
+- Limited access to real-time safety information
+- Lack of community-based safety networks
+- Insufficient emergency response systems
+
+### Competition Category
+Women and Girl's Safety
+
+### Go Guardian's Solution
+- Real-time AI-powered safety analysis
+- Community-driven safety networks
+- Emergency response optimization
+- Behavioral pattern recognition
+- Safe route planning
+
+### Measurable Impact
+- Reduced response time to safety incidents
+- Increased community safety awareness
+- Enhanced emergency service coordination
+- Improved access to safe spaces
+- Data-driven safety improvements
+
+## Technology Stack
+
+### Google Gemini Pro Integration
+- Real-time safety analysis of routes and areas
+- Visual analysis of surroundings using Gemini Pro Vision
+- Natural language processing for emergency response
+- Contextual safety recommendations
+- Behavior pattern analysis
+- Environmental threat detection
+
+Key Features:
+- Multi-modal analysis (text, image, location data)
+- Real-time safety scoring
+- Contextual recommendations
+- Emergency response generation
+
+### Additional Google Technologies
+- Google Maps Platform
+  - Routes API for safe path planning
+  - Places API for safe location identification
+  - Geocoding API for location services
+  - Distance Matrix API for route optimization
+- Google Cloud Platform
+  - App Engine for deployment
+  - Cloud Storage for data
+  - Cloud Logging for monitoring
 
 ## Features
 
 ### 🗺️ Smart Route Planning
 - AI-powered route recommendations based on:
-  - Street lighting conditions
-  - Time-of-day analysis
-  - Historical safety data
+  - Street lighting infrastructure analysis (working vs total lights)
+  - Time-of-day safety scoring
+  - Historical incident data
   - Real-time crowd density
-  - Public transit schedules
+  - Public transit accessibility
 - Natural language processing for intuitive destination input
-- Dynamic rerouting based on safety conditions
+- Dynamic rerouting based on real-time safety conditions
+- Safety score visualization for each route
 
 ### 🚨 Emergency Response System
-- Motion-triggered SOS activation (phone shake)
-- Automatic alerting of trusted contacts with location
-- One-tap audio/video recording
-- Emergency services quick-dial
-- AI-powered situation analysis and guidance
-- Custom emergency script generation
+- Motion-triggered SOS activation
+- Intelligent emergency contact management with relationship categorization
+- One-tap emergency services access with:
+  - Automatic location sharing
+  - Audio/video recording
+  - Custom emergency scripts
+- Real-time situation analysis with AI guidance
+- Fallback emergency protocols when offline
 
-### 🤖 AI Integration Features
-- Real-time environment analysis using phone camera
-- Voice command recognition for hands-free operation
-- Contextual safety recommendations
-- Pattern recognition and threat assessment
-- Natural language processing for user commands
+### 🤖 AI Safety Analysis
+- Real-time environment analysis using:
+  - Street lighting conditions monitoring
+  - Infrastructure status assessment
+  - Time-based risk evaluation
+  - Pattern recognition for threat assessment
+  - Voice command recognition for hands-free operation
+- Contextual safety recommendations based on:
+  - Current location
+  - Time of day
+  - Historical data
+  - Environmental factors
+- Safety score calculation with multiple parameters:
+  - Area coverage
+  - Working infrastructure
+  - Historical incidents
+  - Emergency resource proximity
 
-### 📱 User Safety Features
-- Dynamic safe zone mapping
-- Community safety network
-- Real-time location monitoring
-- Smart schedule advisor
-- Personalized safety learning
-- Behavior pattern prediction
+### 📱 Community Safety Network
+Features referenced from ```typescript:frontend/src/app/community/page.tsx```:
+- Neighborhood safety groups
+- Real-time safety alerts
+- Verified incident reporting
+- Community-driven safety updates
+- Location-based group suggestions
+- Active member monitoring
+
+### 🏥 Safe Places Network
+Features referenced from ```typescript:frontend/src/components/SafePlacesSearch.tsx```:
+- Categorized safe locations:
+  - Police stations
+  - Hospitals
+  - Safe businesses
+  - Community safe spaces
+- Real-time availability status
+- Distance and routing information
+- Emergency contact information
+- Operating hours tracking
+
+### 📊 Safety Analytics
+Features referenced from ```typescript:frontend/src/components/SafetyDataVisualization.tsx```:
+- Infrastructure status monitoring
+- Working lights percentage
+- Area safety trends
+- Risk level assessment
+- Emergency resource mapping
+
+## Technical Implementation
+
+### AI Integration
+Referenced from ```python:backend/app/services/gemini_service.py```:
+- Real-time route safety analysis
+- Time-aware risk assessment
+- Multi-factor safety scoring
+- Contextual recommendation generation
+
+### Safety Monitoring
+Referenced from ```python:backend/app/services/monitoring_service.py```:
+- Real-time location tracking
+- Route deviation detection
+- Dynamic safety assessment
+- Automated alert triggering
+
+### Emergency Response
+Referenced from ```python:backend/app/services/emergency_service.py```:
+- Intelligent response routing
+- Safe place identification
+- Emergency guidance generation
+- Fallback protocol management
 
 ## Technical Stack
 
@@ -144,13 +254,19 @@ python run.py
 go-guardian/
 ├── frontend/
 │   ├── app/
-│   ├── components/
-│   │   └── ui/          # shadcn/ui components
-│   ├── lib/
-│   └── public/
+│   │   ├── community/
+│   │   │   └── page.tsx
+│   │   ├── components/
+│   │   │   ├── SafePlacesSearch.tsx
+│   │   │   └── SafetyDataVisualization.tsx
+│   │   ├── lib/
+│   │   └── public/
 ├── backend/
 │   ├── app/
 │   │   ├── services/
+│   │   │   ├── gemini_service.py
+│   │   │   ├── monitoring_service.py
+│   │   │   └── emergency_service.py
 │   │   └── routes/
 │   └── tests/
 └── README.md
@@ -170,16 +286,16 @@ python -m pytest tests/
 
 ## Social Impact
 
-- Aligned with UN Sustainable Development Goal 5 (Gender Equality)
-- Empowering women's mobility in urban environments
-- Contributing to safer communities
-- Optimizing emergency response systems
-- Building a supportive safety network
+- Empowering women's safe mobility in urban environments
+- Reducing barriers to women's freedom of movement
+- Creating safer communities through technology
+- Optimizing emergency response for women's safety
+- Building a supportive safety network for women
+- Contributing to violence prevention through early warning systems
 
 ## Future Development
 
 - Beta testing with women's organizations
-- Feature expansion based on user feedback
 - Strategic partnerships with:
   - Law enforcement agencies
   - Emergency services
@@ -201,14 +317,12 @@ This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md
 
 ## Support
 
-For support, email support@goguardian.com or join our Slack community.
+For support, email nidhispai@gmail.com.
 
 ## Acknowledgments
 
 - San Francisco Open Data Portal
 - Women's safety organizations
-- Beta testing participants
-- Contributing developers
 
 ---
-Made with ❤️ for a safer world
+Made with ❤️ for women's safety worldwide
