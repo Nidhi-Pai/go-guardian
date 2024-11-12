@@ -187,14 +187,17 @@ cd go-guardian
 
 2. Install frontend dependencies
 ```bash
-# Install frontend dependencies
+# Navigate to frontend directory
 cd frontend
 npm install
 ```
 
-3. Install shadcn/ui components (if needed)
+3. Install shadcn/ui components
 ```bash
-npx shadcn-ui@latest init
+# Install individual components as needed
+npx shadcn-ui@latest add scroll-area
+npx shadcn-ui@latest add button
+# Add other components similarly
 ```
 
 4. Create and configure environment variables
@@ -211,20 +214,22 @@ cp .env.example .env
 ```bash
 # Frontend (.env.local)
 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
-NEXT_PUBLIC_FIREBASE_API_KEY=your_firebase_api_key_here
 
 # Backend (.env)
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-6. Install backend dependencies
+6. Set up Python virtual environment and install backend dependencies
 ```bash
-pip install -r requirements.txt
+# From the backend directory
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 7. Run the tests
 ```bash
-python -m pytest tests/
+python3 -m pytest tests/
 ```
 
 ## Development Setup
@@ -246,7 +251,8 @@ npm run dev
 2. Start the backend server:
 ```bash
 # From the backend directory
-python run.py
+source venv/bin/activate  # If not already activated
+python3 run.py
 ```
 
 ## Project Structure
