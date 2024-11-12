@@ -212,11 +212,29 @@ cp .env.example .env
 
 5. Add your API keys to the respective `.env` files:
 ```bash
-# Frontend (.env.local)
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key_here
+# Frontend (@frontend/.env.local)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
+GEMINI_API_KEY=your_gemini_api_key
+WEATHER_API_KEY=your_weather_api_key
 
-# Backend (.env)
-GEMINI_API_KEY=your_gemini_api_key_here
+# Backend (@backend/.env)
+FLASK_DEBUG=1
+PORT=8000
+FLASK_LOG_LEVEL=INFO
+```
+
+Required API Keys:
+- Google Maps API key (for maps and location services)
+- Gemini API key (for AI-powered safety analysis)
+- Weather API key (for weather alerts and conditions)
+
+You can obtain these API keys from:
+- Google Maps API: Google Cloud Console
+- Gemini API: Google AI Studio
+- Weather API: OpenWeatherMap
+
+Note: Make sure to never commit your actual API keys to version control.
 ```
 
 6. Set up Python virtual environment and install backend dependencies
