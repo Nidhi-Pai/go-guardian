@@ -71,20 +71,11 @@ def prepare_route_data(data: Dict[str, Any]) -> Dict[str, Any]:
         logger.error(f"Error preparing route data: {str(e)}")
         raise
 
-@safety_bp.route('/analyze-route', methods=['POST', 'OPTIONS'])
+@safety_bp.route('/analyze-route', methods=['POST'])
 def analyze_route():
-    if request.method == 'OPTIONS':
-        response = make_response()
-        response.headers.add('Access-Control-Allow-Origin', request.origin or ALLOWED_ORIGINS[0])
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Referer')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
-
     try:
         # Add CORS headers to all responses
         response = make_response()
-        response.headers.add('Access-Control-Allow-Origin', request.origin or ALLOWED_ORIGINS[0])
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         
         data = request.get_json()
@@ -125,16 +116,12 @@ def analyze_route():
         response.headers.add('Access-Control-Allow-Credentials', 'true')
         return response, 500
 
-@safety_bp.route('/active-route/<int:route_id>', methods=['GET', 'PUT', 'OPTIONS'])
+@safety_bp.route('/active-route/<int:route_id>', methods=['GET', 'PUT'])
 def active_route(route_id):
     """Get or update active route information."""
     request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
     logger.info(f"[RequestID: {request_id}] Active route request for route_id: {route_id}")
 
-    if request.method == 'OPTIONS':
-        logger.debug(f"[RequestID: {request_id}] Handling OPTIONS request")
-        return {'success': True}, 200
-        
     try:
         route = Route.query.get_or_404(route_id)
         logger.debug(f"[RequestID: {request_id}] Found route: {route_id}")
@@ -183,6 +170,7 @@ def active_route(route_id):
 @cross_origin(supports_credentials=True, origins=['http://localhost:3000'])
 def analyze_area():
     try:
+        print("AAAAAAAAAAAAHHHHHHHHHHH")
         data = request.get_json()
         if not data or 'location' not in data:
             logger.error("Missing location data in request")
@@ -216,16 +204,13 @@ def analyze_area():
             'status': 'error',
             'error': 'Internal server error occurred'
         }), 500
-
-@safety_bp.route('/route-history', methods=['GET', 'OPTIONS'])
+    
+@safety_bp.route('/route-history', methods=['GET'])
 def route_history():
     """Get route history."""
     request_id = datetime.now().strftime('%Y%m%d%H%M%S%f')
     logger.info(f"[RequestID: {request_id}] Route history request received")
 
-    if request.method == 'OPTIONS':
-        logger.debug(f"[RequestID: {request_id}] Handling OPTIONS request")
-        return {'success': True}, 200
         
     try:
         logger.info(f"[RequestID: {request_id}] Fetching route history")

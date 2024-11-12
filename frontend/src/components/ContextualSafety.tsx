@@ -19,6 +19,7 @@ interface SafetyContext {
   primary_concerns: string[];
   recommendations: string[];
   safe_spots: string[];
+  safe_spaces: string[];
 }
 
 interface ContextualSafetyProps {
@@ -40,6 +41,7 @@ const getFallbackAnalysis = (): SafetyContext => ({
   primary_concerns: ["No real-time data available"],
   recommendations: ["Exercise normal precautions"],
   safe_spots: ["Nearby public places"],
+  safe_spaces: ["Police station", "Hospital"],
 });
 
 export function ContextualSafety({ location }: ContextualSafetyProps) {
@@ -84,11 +86,12 @@ export function ContextualSafety({ location }: ContextualSafetyProps) {
 
         if (responseData.status === "success" && responseData.data) {
           setContext({
-            safety_score: responseData.data.safety_score ?? 50,
+            safety_score: responseData.data.area_safety_score ?? 50,
             risk_level: responseData.data.risk_level || "unknown",
             primary_concerns: responseData.data.primary_concerns || [],
             recommendations: responseData.data.recommendations || [],
             safe_spots: responseData.data.safe_spots || [],
+            safe_spaces: responseData.data.safe_spaces || [],
           });
         } else {
           setContext(getFallbackAnalysis());

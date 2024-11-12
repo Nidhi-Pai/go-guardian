@@ -54,7 +54,7 @@ def create_app():
          resources={
              r"/api/*": {
                  "origins": ["http://localhost:3000"],
-                 "methods": ["GET", "POST", "OPTIONS"],
+                 "methods": ["GET", "POST"],
                  "allow_headers": ["Content-Type", "Authorization"],
                  "supports_credentials": True
              }
@@ -146,14 +146,5 @@ def create_app():
             "error": str(error),
             "status": "error"
         }), 500
-
-    # Add CORS headers for all routes
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Referer')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
 
     return app

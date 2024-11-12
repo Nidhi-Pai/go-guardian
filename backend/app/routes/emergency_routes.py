@@ -142,7 +142,7 @@ def manage_contacts():
             db.session.rollback()
             return jsonify({'error': str(e)}), 500
 
-@emergency_bp.route('/emergency-resources', methods=['POST', 'OPTIONS'])
+@emergency_bp.route('/emergency-resources', methods=['POST'])
 @cross_origin(origins=['http://localhost:3000'], supports_credentials=True)
 async def get_emergency_resources():
     try:

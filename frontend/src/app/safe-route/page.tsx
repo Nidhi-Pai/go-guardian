@@ -19,6 +19,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { VoiceCommand } from "@/components/VoiceCommand";
 import { SafePlacesSearch } from "@/components/SafePlacesSearch";
+import { useJsApiLoader } from "@react-google-maps/api";
+import { useMaps } from "@/contexts/MapsContext";
 
 // Update API base URL to match your Flask backend
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -118,6 +120,8 @@ export default function SafeRoutePage() {
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
   const [startLocation, setStartLocation] = useState<Location | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const { isLoaded, loadError } = useMaps();
 
   const locationOptions = {
     enableHighAccuracy: true,
@@ -129,11 +133,57 @@ export default function SafeRoutePage() {
     const timeoutId = setTimeout(() => {
       setIsInitializing(false);
     }, 1000);
-
+ 
     return () => clearTimeout(timeoutId);
   }, []);
 
   useEffect(() => {
+    const requestLocationPermission = async () => {
+      try {
+        const result = await navigator.permissions.query({
+          name: "geolocation",
+        });
+        if (result.state === "denied") {
+          setLocationError(
+            "Location access is denied. Please enable it in your browser settings.",
+          );
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            setCurrentLocation({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              timestamp: new Date(position.timestamp),
+            });
+            setLocationError(null);
+          },
+          (error) => {
+            console.error("Geolocation error:", error);
+            setLocationError(
+              "Unable to get your location. Please enable location services.",
+            );
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          },
+        );
+      } catch (error) {
+        console.error("Permission error:", error);
+        setLocationError("Location permission error");
+      }
+    };
+
+    requestLocationPermission();
+  }, []);
+
+
+  useEffect(() => {
+    if (!isLoaded) return;
+
     if ("geolocation" in navigator) {
       if (typeof google === "undefined") {
         console.error("Google Maps API not loaded");
@@ -187,7 +237,7 @@ export default function SafeRoutePage() {
         locationOptions,
       );
     }
-  }, []);
+  }, [isLoaded]);
 
   const analyzeSafetyForRoute = async (
     start: Location,

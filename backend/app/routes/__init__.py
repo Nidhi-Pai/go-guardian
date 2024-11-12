@@ -12,8 +12,8 @@ def create_app():
     CORS(app, 
          resources={
              r"/api/*": {
-                 "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
-                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                 "origins": ["http://localhost:3000"],
+                 "methods": ["GET", "POST", "PUT", "DELETE"],
                  "allow_headers": ["Content-Type", "Authorization", "Accept"],
                  "expose_headers": ["Content-Type", "Authorization"],
                  "supports_credentials": True,
@@ -21,13 +21,12 @@ def create_app():
              }
          })
     
-    # After request handler
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+    # # After request handler
+    # @app.after_request
+    # def after_request(response):
+    #     response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,Accept')
+    #     response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE')
+    #     response.headers.add('Access-Control-Allow-Credentials', 'true')
+    #     return response
 
     return app
